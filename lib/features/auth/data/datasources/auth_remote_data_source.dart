@@ -5,10 +5,7 @@ import '../../domain/entities/auth_session.dart';
 /// Purpose: Define remote authentication API contract.
 abstract interface class AuthRemoteDataSource {
   /// Purpose: Authenticate a user and return backend auth session payload.
-  Future<AuthSession> signIn({
-    required String email,
-    required String password,
-  });
+  Future<AuthSession> signIn({required String email, required String password});
 
   /// Purpose: Register a new user account.
   Future<void> signUp({
@@ -33,16 +30,13 @@ final class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   }) async {
     final response = await _dio.post<Map<String, dynamic>>(
       '/api/collections/users/auth-with-password',
-      data: <String, dynamic>{
-        'identity': email.trim(),
-        'password': password,
-      },
+      data: <String, dynamic>{'identity': email.trim(), 'password': password},
     );
 
     final data = response.data ?? const <String, dynamic>{};
     final token = (data['token'] as String?)?.trim() ?? '';
-    final record = (data['record'] as Map<String, dynamic>?) ??
-        const <String, dynamic>{};
+    final record =
+        (data['record'] as Map<String, dynamic>?) ?? const <String, dynamic>{};
     final userId = (record['id'] as String?)?.trim() ?? '';
     final userEmail = (record['email'] as String?)?.trim() ?? '';
     final name = (record['name'] as String?)?.trim();

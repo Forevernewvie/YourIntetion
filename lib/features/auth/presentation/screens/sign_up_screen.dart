@@ -42,11 +42,13 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
       return;
     }
 
-    await ref.read(authControllerProvider.notifier).signUp(
-      email: _emailController.text.trim(),
-      password: _passwordController.text,
-      name: _nameController.text.trim(),
-    );
+    await ref
+        .read(authControllerProvider.notifier)
+        .signUp(
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+          name: _nameController.text.trim(),
+        );
   }
 
   /// Purpose: Build sign-up form and action controls.
@@ -55,7 +57,9 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
     final authState = ref.watch(authControllerProvider);
     final isLoading = authState.isLoading;
     final theme = Theme.of(context);
-    final errorMessage = authState.hasError ? _errorMessage(authState.error) : null;
+    final errorMessage = authState.hasError
+        ? _errorMessage(authState.error)
+        : null;
 
     return PscPageScaffold(
       title: 'Create Account',

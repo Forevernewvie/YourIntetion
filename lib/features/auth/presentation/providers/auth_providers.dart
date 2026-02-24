@@ -47,10 +47,7 @@ class AuthController extends AsyncNotifier<AuthSession?> {
   }
 
   /// Purpose: Execute sign-in flow and update global session state.
-  Future<void> signIn({
-    required String email,
-    required String password,
-  }) async {
+  Future<void> signIn({required String email, required String password}) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       final session = await ref
@@ -69,11 +66,9 @@ class AuthController extends AsyncNotifier<AuthSession?> {
   }) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
-      final session = await ref.read(authRepositoryProvider).signUp(
-        email: email,
-        password: password,
-        name: name,
-      );
+      final session = await ref
+          .read(authRepositoryProvider)
+          .signUp(email: email, password: password, name: name);
       _syncSessionProviders(session);
       return session;
     });

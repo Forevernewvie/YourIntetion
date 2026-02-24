@@ -3,10 +3,7 @@ import '../entities/auth_session.dart';
 /// Purpose: Define authentication behavior independent from concrete data sources.
 abstract interface class AuthRepository {
   /// Purpose: Authenticate existing user credentials and return session.
-  Future<AuthSession> signIn({
-    required String email,
-    required String password,
-  });
+  Future<AuthSession> signIn({required String email, required String password});
 
   /// Purpose: Register new user and return authenticated session.
   Future<AuthSession> signUp({

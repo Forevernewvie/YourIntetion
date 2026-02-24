@@ -44,7 +44,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     initialLocation: AppRoutePath.login,
     redirect: (_, state) {
       final path = state.uri.path;
-      final isAuthRoute = path == AppRoutePath.login || path == AppRoutePath.signUp;
+      final isAuthRoute =
+          path == AppRoutePath.login || path == AppRoutePath.signUp;
 
       if (!isAuthenticated && !isAuthRoute) {
         return AppRoutePath.login;

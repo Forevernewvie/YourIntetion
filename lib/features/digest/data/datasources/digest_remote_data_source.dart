@@ -181,7 +181,9 @@ final class DigestRemoteDataSourceImpl implements DigestRemoteDataSource {
 
   /// Purpose: Submit feedback event and return persisted feedback payload.
   @override
-  Future<FeedbackEvent> submitFeedback({required FeedbackEvent feedback}) async {
+  Future<FeedbackEvent> submitFeedback({
+    required FeedbackEvent feedback,
+  }) async {
     try {
       final response = await _dio.post<Map<String, dynamic>>(
         '/v1/feedback',
@@ -206,7 +208,7 @@ final class DigestRemoteDataSourceImpl implements DigestRemoteDataSource {
         reason: (data['reason'] as String?) ?? feedback.reason,
         createdAt:
             DateTime.tryParse((data['createdAt'] as String?) ?? '')?.toUtc() ??
-                feedback.createdAt.toUtc(),
+            feedback.createdAt.toUtc(),
       );
     } on DioException catch (error, stackTrace) {
       AppLogger.error(
@@ -245,14 +247,15 @@ final class DigestRemoteDataSourceImpl implements DigestRemoteDataSource {
           .map((entry) => entry.toString())
           .toList(growable: false),
       tone: _parseTone((json['tone'] as String?) ?? 'neutral'),
-      frequency:
-          _parseFrequency((json['frequency'] as String?) ?? 'threePerWeek'),
+      frequency: _parseFrequency(
+        (json['frequency'] as String?) ?? 'threePerWeek',
+      ),
       length: _parseLength((json['length'] as String?) ?? 'quick'),
       rankingTweaks: rankingTweaksRaw.map(
         (key, value) => MapEntry(key, (value as num?)?.round() ?? 0),
       ),
-      updatedAt: DateTime.tryParse((json['updatedAt'] as String?) ?? '')
-              ?.toUtc() ??
+      updatedAt:
+          DateTime.tryParse((json['updatedAt'] as String?) ?? '')?.toUtc() ??
           now,
     );
   }
@@ -334,8 +337,8 @@ final class DigestRemoteDataSourceImpl implements DigestRemoteDataSource {
         code: AppErrorCode.apiBadResponse,
         message: error.response?.data is Map<String, dynamic>
             ? (((error.response?.data as Map<String, dynamic>)['message']
-                        as String?) ??
-                    fallbackMessage)
+                      as String?) ??
+                  fallbackMessage)
             : fallbackMessage,
         cause: error,
       );
@@ -360,10 +363,7 @@ final class DigestRemoteDataSourceImpl implements DigestRemoteDataSource {
 /// Purpose: Keep short-lived in-memory latest digest cache entry.
 final class _LatestDigestCacheEntry {
   /// Purpose: Construct cache entry with payload and capture time.
-  const _LatestDigestCacheEntry({
-    required this.digest,
-    required this.cachedAt,
-  });
+  const _LatestDigestCacheEntry({required this.digest, required this.cachedAt});
 
   final DigestResponseDto digest;
   final DateTime cachedAt;

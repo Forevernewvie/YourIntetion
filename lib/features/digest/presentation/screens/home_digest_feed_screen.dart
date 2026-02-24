@@ -44,8 +44,9 @@ class HomeDigestFeedScreen extends ConsumerWidget {
                         },
                       )
                     : _EmptyDigestState(
-                        onRetry: () =>
-                            ref.read(digestRefreshTickProvider.notifier).state++,
+                        onRetry: () => ref
+                            .read(digestRefreshTickProvider.notifier)
+                            .state++,
                       ),
               ),
               const SizedBox(height: 8),

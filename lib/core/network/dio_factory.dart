@@ -44,10 +44,12 @@ final class DioFactory {
         },
         onError: (error, handler) async {
           if (_canRetry(error)) {
-            final attempt = (error.requestOptions.extra['retryAttempt'] as int?) ?? 0;
+            final attempt =
+                (error.requestOptions.extra['retryAttempt'] as int?) ?? 0;
             if (attempt < AppConstants.retryMaxAttempts) {
               final delay = Duration(
-                milliseconds: AppConstants.retryBaseDelay.inMilliseconds * (attempt + 1),
+                milliseconds:
+                    AppConstants.retryBaseDelay.inMilliseconds * (attempt + 1),
               );
               await Future<void>.delayed(delay);
 

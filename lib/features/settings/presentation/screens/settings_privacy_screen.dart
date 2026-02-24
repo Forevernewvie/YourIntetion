@@ -61,7 +61,8 @@ class SettingsPrivacyScreen extends ConsumerWidget {
           const PscStateRowCard(label: 'Theme', value: 'System (Light/Dark)'),
           const SizedBox(height: 12),
           FilledButton.tonal(
-            onPressed: () => ref.read(authControllerProvider.notifier).signOut(),
+            onPressed: () =>
+                ref.read(authControllerProvider.notifier).signOut(),
             child: const Text('Sign Out'),
           ),
         ],

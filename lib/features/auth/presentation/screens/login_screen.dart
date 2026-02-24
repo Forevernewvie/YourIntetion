@@ -38,10 +38,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       return;
     }
 
-    await ref.read(authControllerProvider.notifier).signIn(
-      email: _emailController.text.trim(),
-      password: _passwordController.text,
-    );
+    await ref
+        .read(authControllerProvider.notifier)
+        .signIn(
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+        );
   }
 
   /// Purpose: Build login form and status feedback.
@@ -50,7 +52,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final authState = ref.watch(authControllerProvider);
     final isLoading = authState.isLoading;
     final theme = Theme.of(context);
-    final errorMessage = authState.hasError ? _errorMessage(authState.error) : null;
+    final errorMessage = authState.hasError
+        ? _errorMessage(authState.error)
+        : null;
 
     return PscPageScaffold(
       title: 'Sign In',
