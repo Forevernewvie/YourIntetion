@@ -1,0 +1,9 @@
+# Default ownership
+* @Forevernewvie
+
+# Backend ownership
+/backend/ @Forevernewvie
+
+# Flutter app ownership
+/lib/ @Forevernewvie
+/test/ @Forevernewvie
