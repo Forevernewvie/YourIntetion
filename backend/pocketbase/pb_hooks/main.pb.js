@@ -1,14 +1,34 @@
 /// <reference path="../pb_data/types.d.ts" />
 
 const pscApiHandler = (e) => {
+  // Purpose: Hold unit conversion constants used in pipeline and pagination math.
+  const timeUnits = Object.freeze({
+    millisecondsPerMinute: 60 * 1000,
+    minutesPerDay: 24 * 60,
+    minutesPerHour: 60,
+    secondsPerHour: 60,
+  })
+
+  // Purpose: Hold immutable score composition weights for quality calculation.
+  const qualityWeights = Object.freeze({
+    diversity: 0.4,
+    freshness: 0.4,
+    baseline: 0.2,
+  })
+
+  // Purpose: Keep route behavior deterministic by centralizing length policy caps.
+  const lengthCapByPolicy = Object.freeze({
+    quick: 5,
+    standard: 10,
+    deep: 15,
+  })
+
   const nowIso = () => new Date().toISOString()
 
   const makeTraceId = () => {
     const path = e.request ? String(e.request.url.path || "") : ""
-    return $security.sha256(`${Date.now()}|${Math.random()}|${path}`).slice(0, 24)
+    return $security.sha256(`${Date.now()}|${Math.random()}|${path}`).slice(0, runtimeConfig.traceIdLength)
   }
-
-  const traceId = makeTraceId()
 
   const sendError = (status, code, message, details) => {
     $app.logger().error(
@@ -116,6 +136,35 @@ const pscApiHandler = (e) => {
     return raw.trim()
   }
 
+  // Purpose: Parse positive integer environment variables with strict fallback.
+  const parsePositiveIntEnv = (name, fallbackValue) => {
+    const raw = readEnv(name, "")
+    if (!raw) {
+      return fallbackValue
+    }
+
+    const parsed = Number(raw)
+    if (Number.isNaN(parsed) || parsed <= 0) {
+      return fallbackValue
+    }
+
+    return Math.floor(parsed)
+  }
+
+  // Purpose: Configure runtime tunables from environment without code-level hardcoding.
+  const runtimeConfig = {
+    traceIdLength: parsePositiveIntEnv("PSC_TRACE_ID_LENGTH", 24),
+    sourceLookbackHours: parsePositiveIntEnv("PSC_SOURCE_LOOKBACK_HOURS", 48),
+    sourceCandidateLimit: parsePositiveIntEnv("PSC_SOURCE_CANDIDATE_LIMIT", 500),
+    digestItemsReadLimit: parsePositiveIntEnv("PSC_DIGEST_ITEMS_READ_LIMIT", 100),
+    digestCitationsReadLimit: parsePositiveIntEnv("PSC_DIGEST_CITATIONS_READ_LIMIT", 20),
+    savedDigestsDefaultLimit: parsePositiveIntEnv("PSC_SAVED_DIGESTS_DEFAULT_LIMIT", 20),
+    savedDigestsMaxLimit: parsePositiveIntEnv("PSC_SAVED_DIGESTS_MAX_LIMIT", 50),
+    freshnessMaxMinutes: parsePositiveIntEnv("PSC_FRESHNESS_MAX_MINUTES", timeUnits.minutesPerDay),
+  }
+
+  const traceId = makeTraceId()
+
   const normalizeStringArray = (value) => {
     const seen = new Set()
     const normalized = []
@@ -195,6 +244,9 @@ const pscApiHandler = (e) => {
       priorityBoost: round(clamp(Number.isNaN(priorityBoost) ? 0.55 : priorityBoost, 0, 2), 4),
     }
   }
+
+  // Purpose: Normalize list-like value into a lowercase set for O(1) membership checks.
+  const toNormalizedSet = (value) => new Set(normalizeStringArray(value))
 
   const defaults = {
     topic_priorities: {
@@ -452,18 +504,20 @@ const pscApiHandler = (e) => {
       publishedAt,
       publishedAtMs,
       trustScore: clamp(record.getFloat("trust_score"), 0, 100),
-      freshnessMinutes: Math.max(0, Math.floor((nowMs - publishedAtMs) / 60000)),
+      freshnessMinutes: Math.max(0, Math.floor((nowMs - publishedAtMs) / timeUnits.millisecondsPerMinute)),
     }
   }
 
   const loadCandidates = (nowMs) => {
-    const minPublishedAt = new Date(Date.now() - (48 * 60 * 60 * 1000)).toISOString()
+    const minPublishedAt = new Date(
+      Date.now() - (runtimeConfig.sourceLookbackHours * timeUnits.minutesPerHour * timeUnits.secondsPerHour * 1000),
+    ).toISOString()
 
     const records = $app.findRecordsByFilter(
       "source_entries",
       "published_at >= {:minPublishedAt} && blocked = false",
       "-published_at,-id",
-      500,
+      runtimeConfig.sourceCandidateLimit,
       0,
       { minPublishedAt },
     )
@@ -511,8 +565,11 @@ const pscApiHandler = (e) => {
       queue.push(child)
     })
 
-    while (queue.length > 0) {
-      const state = queue.shift()
+    // Purpose: Use cursor-based BFS queue traversal to avoid Array.shift O(N^2) behavior.
+    let queueCursor = 0
+    while (queueCursor < queue.length) {
+      const state = queue[queueCursor]
+      queueCursor += 1
       const transitions = nodes[state].next
       Object.keys(transitions).forEach((ch) => {
         const nextState = transitions[ch]
@@ -570,8 +627,8 @@ const pscApiHandler = (e) => {
   }
 
   const applySourceFilters = (candidates, allowlist, blocklist) => {
-    const allowSet = new Set(asArray(allowlist))
-    const blockSet = new Set(asArray(blocklist))
+    const allowSet = toNormalizedSet(allowlist)
+    const blockSet = toNormalizedSet(blocklist)
     const useAllow = allowSet.size > 0
 
     return candidates.filter((candidate) => {
@@ -620,7 +677,7 @@ const pscApiHandler = (e) => {
       topicPriority: round(topicPriority, 4),
       baseScore: round(topicPriority, 6),
       trustNorm: round(clamp(candidate.trustScore / 100, 0, 1), 6),
-      freshnessNorm: round(clamp(1 - (candidate.freshnessMinutes / 1440), 0, 1), 6),
+      freshnessNorm: round(clamp(1 - (candidate.freshnessMinutes / runtimeConfig.freshnessMaxMinutes), 0, 1), 6),
     }
   }
 
@@ -652,9 +709,18 @@ const pscApiHandler = (e) => {
     const uniqueDomains = new Set(items.map((item) => item.sourceDomain)).size
     const diversity = uniqueDomains / items.length
     const avgFreshness = items.reduce((acc, item) => acc + item.freshnessMinutes, 0) / items.length
-    const freshness = clamp(1 - (avgFreshness / 1440), 0, 1)
+    const freshness = clamp(1 - (avgFreshness / runtimeConfig.freshnessMaxMinutes), 0, 1)
 
-    return round(clamp((0.4 * diversity) + (0.4 * freshness) + 0.2, 0, 1), 4)
+    return round(
+      clamp(
+        (qualityWeights.diversity * diversity) +
+        (qualityWeights.freshness * freshness) +
+        qualityWeights.baseline,
+        0,
+        1,
+      ),
+      4,
+    )
   }
 
   const buildPipeline = (profileRecord) => {
@@ -699,9 +765,8 @@ const pscApiHandler = (e) => {
     const topicAndToneMs = Date.now() - t0
 
     t0 = Date.now()
-    const capByLength = { quick: 5, standard: 10, deep: 15 }
     const preRankSorted = deterministicSortBy(topicScored, "baseScore")
-    const selectedByLength = preRankSorted.slice(0, capByLength[rules.length] || 10)
+    const selectedByLength = preRankSorted.slice(0, lengthCapByPolicy[rules.length] || lengthCapByPolicy.standard)
     const lengthCapMs = Date.now() - t0
 
     t0 = Date.now()
@@ -782,7 +847,7 @@ const pscApiHandler = (e) => {
       "digest_items",
       "digest = {:digestId}",
       "+rank,+id",
-      100,
+      runtimeConfig.digestItemsReadLimit,
       0,
       { digestId: digestRecord.id },
     )
@@ -792,7 +857,7 @@ const pscApiHandler = (e) => {
         "citations",
         "digest_item = {:digestItemId}",
         "+published_at,+id",
-        20,
+        runtimeConfig.digestCitationsReadLimit,
         0,
         { digestItemId: itemRecord.id },
       )
@@ -896,12 +961,13 @@ const pscApiHandler = (e) => {
     const limitRaw = e.request ? String(e.request.url.query().get("limit") || "") : ""
     const cursorRaw = e.request ? String(e.request.url.query().get("cursor") || "") : ""
 
-    const requestedLimit = Number(limitRaw || 20)
+    const requestedLimit = Number(limitRaw || runtimeConfig.savedDigestsDefaultLimit)
     if (Number.isNaN(requestedLimit) || requestedLimit <= 0) {
       fail(400, "BAD_REQUEST", "limit must be positive integer")
     }
 
-    const limit = Math.min(requestedLimit, 50)
+    const effectiveMaxLimit = Math.max(runtimeConfig.savedDigestsMaxLimit, runtimeConfig.savedDigestsDefaultLimit)
+    const limit = Math.min(requestedLimit, effectiveMaxLimit)
 
     const ownerFilter = context.mode === "guest" ? "user = ''" : "user = {:userId}"
     const params = context.mode === "guest" ? [] : [{ userId: context.userId }]
