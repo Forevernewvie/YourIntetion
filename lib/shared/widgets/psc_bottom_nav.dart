@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../app/router/app_router.dart';
+
 /// Purpose: Provide custom bottom navigation aligned with Pencil design language.
 class PscBottomNav extends StatelessWidget {
   /// Purpose: Construct bottom navigation with current selected index.
@@ -64,13 +66,13 @@ class PscBottomNav extends StatelessWidget {
   void _onSelect(BuildContext context, int index) {
     switch (index) {
       case 0:
-        context.go('/home');
+        context.go(AppRoutePath.home);
       case 1:
-        context.go('/rules/basic');
+        context.go(AppRoutePath.rulesBasic);
       case 2:
-        context.go('/saved');
+        context.go(AppRoutePath.saved);
       case 3:
-        context.go('/settings');
+        context.go(AppRoutePath.settings);
     }
   }
 }

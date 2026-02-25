@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import '../../../../core/error/app_failure.dart';
+import '../../../../core/logging/app_logger.dart';
 import '../../domain/entities/auth_session.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../datasources/auth_local_data_source.dart';
@@ -24,11 +25,20 @@ final class AuthRepositoryImpl implements AuthRepository {
     required String email,
     required String password,
   }) async {
+    AppLogger.info('auth_sign_in_requested');
     try {
       final session = await _remote.signIn(email: email, password: password);
       await _local.saveSession(session);
+      AppLogger.info(
+        'auth_sign_in_succeeded',
+        fields: {'userId': session.userId},
+      );
       return session;
     } on DioException catch (error) {
+      AppLogger.warn(
+        'auth_sign_in_failed',
+        fields: {'statusCode': error.response?.statusCode},
+      );
       throw _mapDioFailure(
         error,
         fallbackMessage: 'Failed to sign in. Please check your credentials.',
@@ -43,12 +53,21 @@ final class AuthRepositoryImpl implements AuthRepository {
     required String password,
     required String name,
   }) async {
+    AppLogger.info('auth_sign_up_requested');
     try {
       await _remote.signUp(email: email, password: password, name: name);
       final session = await _remote.signIn(email: email, password: password);
       await _local.saveSession(session);
+      AppLogger.info(
+        'auth_sign_up_succeeded',
+        fields: {'userId': session.userId},
+      );
       return session;
     } on DioException catch (error) {
+      AppLogger.warn(
+        'auth_sign_up_failed',
+        fields: {'statusCode': error.response?.statusCode},
+      );
       throw _mapDioFailure(
         error,
         fallbackMessage: 'Failed to create account. Please retry.',
@@ -78,6 +97,13 @@ final class AuthRepositoryImpl implements AuthRepository {
       return const AppFailure(
         code: AppErrorCode.netUnauthorized,
         message: 'Authentication failed.',
+      );
+    }
+    if (statusCode >= 400 && statusCode < 500) {
+      return AppFailure(
+        code: AppErrorCode.apiBadResponse,
+        message: fallbackMessage,
+        cause: error,
       );
     }
     if (error.type == DioExceptionType.connectionTimeout ||

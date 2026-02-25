@@ -35,6 +35,24 @@ final class DigestLocalDataSourceImpl implements DigestLocalDataSource {
 
   final Isar _isar;
 
+  /// Purpose: Decode cached digest JSON safely into DTO while preserving error context.
+  DigestResponseDto _decodeCachedDigest({
+    required String digestJson,
+    required String errorEvent,
+  }) {
+    try {
+      return DigestResponseDto.fromJson(
+        jsonDecode(digestJson) as Map<String, dynamic>,
+      );
+    } catch (error, stackTrace) {
+      AppLogger.error(errorEvent, error: error, stackTrace: stackTrace);
+      throw const AppFailure(
+        code: AppErrorCode.storageFailure,
+        message: 'Failed to decode cached digest payload.',
+      );
+    }
+  }
+
   /// Purpose: Save digest with deterministic expiration timestamp.
   @override
   Future<void> saveDigest(DigestResponseDto digest) async {
@@ -75,21 +93,10 @@ final class DigestLocalDataSourceImpl implements DigestLocalDataSource {
       return null;
     }
 
-    try {
-      return DigestResponseDto.fromJson(
-        jsonDecode(entity.digestJson) as Map<String, dynamic>,
-      );
-    } catch (error, stackTrace) {
-      AppLogger.error(
-        'digest_cache_decode_failed',
-        error: error,
-        stackTrace: stackTrace,
-      );
-      throw const AppFailure(
-        code: AppErrorCode.storageFailure,
-        message: 'Failed to decode cached digest payload.',
-      );
-    }
+    return _decodeCachedDigest(
+      digestJson: entity.digestJson,
+      errorEvent: 'digest_cache_decode_failed',
+    );
   }
 
   /// Purpose: Read latest non-expired digest without requiring known profile id.
@@ -106,21 +113,10 @@ final class DigestLocalDataSourceImpl implements DigestLocalDataSource {
       return null;
     }
 
-    try {
-      return DigestResponseDto.fromJson(
-        jsonDecode(entity.digestJson) as Map<String, dynamic>,
-      );
-    } catch (error, stackTrace) {
-      AppLogger.error(
-        'digest_cache_decode_failed_any_profile',
-        error: error,
-        stackTrace: stackTrace,
-      );
-      throw const AppFailure(
-        code: AppErrorCode.storageFailure,
-        message: 'Failed to decode cached digest payload.',
-      );
-    }
+    return _decodeCachedDigest(
+      digestJson: entity.digestJson,
+      errorEvent: 'digest_cache_decode_failed_any_profile',
+    );
   }
 
   /// Purpose: Save serialized rule profile for startup continuity.

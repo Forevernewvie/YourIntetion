@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../app/router/app_router.dart';
 import '../../../../shared/layout/psc_page_scaffold.dart';
 import '../../../../shared/widgets/psc_blocks.dart';
 
@@ -46,7 +47,7 @@ class _ToneFrequencyScreenState extends State<ToneFrequencyScreen> {
             label: 'Digest alert preview',
             value: _digestPreviewEnabled ? 'ON' : 'OFF',
             valueColor: _digestPreviewEnabled
-                ? const Color(0xFF1B8F5A)
+                ? theme.colorScheme.primary
                 : theme.textTheme.labelSmall?.color,
             onTap: () => setState(() {
               _digestPreviewEnabled = !_digestPreviewEnabled;
@@ -54,12 +55,12 @@ class _ToneFrequencyScreenState extends State<ToneFrequencyScreen> {
           ),
           const Spacer(),
           FilledButton(
-            onPressed: () => context.go('/home'),
+            onPressed: () => context.go(AppRoutePath.home),
             child: const Text('Finish Setup'),
           ),
           const SizedBox(height: 8),
           OutlinedButton(
-            onPressed: () => context.go('/onboarding/sources'),
+            onPressed: () => context.go(AppRoutePath.onboardingSources),
             child: const Text('Back'),
           ),
         ],

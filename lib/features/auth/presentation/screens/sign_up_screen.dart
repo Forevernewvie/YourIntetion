@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../app/router/app_router.dart';
 import '../../../../core/error/app_failure.dart';
 import '../../../../shared/layout/psc_page_scaffold.dart';
 import '../providers/auth_providers.dart';
@@ -162,7 +163,9 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
             ),
             const SizedBox(height: 8),
             OutlinedButton(
-              onPressed: isLoading ? null : () => context.go('/login'),
+              onPressed: isLoading
+                  ? null
+                  : () => context.go(AppRoutePath.login),
               child: const Text('Back to Sign In'),
             ),
           ],
