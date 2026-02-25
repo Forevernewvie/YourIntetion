@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../app/router/app_router.dart';
 import '../../../../shared/layout/psc_page_scaffold.dart';
 import '../../../../shared/widgets/psc_blocks.dart';
 import '../../../../shared/widgets/psc_search_field.dart';
@@ -84,12 +85,12 @@ class _TopicSelectionScreenState extends State<TopicSelectionScreen> {
           FilledButton(
             onPressed: _selected.isEmpty
                 ? null
-                : () => context.go('/onboarding/sources'),
+                : () => context.go(AppRoutePath.onboardingSources),
             child: const Text('Next: Sources'),
           ),
           const SizedBox(height: 8),
           OutlinedButton(
-            onPressed: () => context.go('/welcome'),
+            onPressed: () => context.go(AppRoutePath.welcome),
             child: const Text('Back'),
           ),
         ],

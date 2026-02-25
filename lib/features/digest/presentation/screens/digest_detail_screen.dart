@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../app/router/app_router.dart';
 import '../../../../shared/layout/psc_page_scaffold.dart';
 import '../../../../shared/widgets/digest_card_tile.dart';
 import '../../../../shared/widgets/psc_blocks.dart';
@@ -82,14 +83,14 @@ class DigestDetailScreen extends ConsumerWidget {
                 children: [
                   Expanded(
                     child: FilledButton(
-                      onPressed: () => context.go('/feedback'),
+                      onPressed: () => context.go(AppRoutePath.feedback),
                       child: const Text('Useful'),
                     ),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: () => context.go('/feedback'),
+                      onPressed: () => context.go(AppRoutePath.feedback),
                       child: const Text('Needs Tuning'),
                     ),
                   ),

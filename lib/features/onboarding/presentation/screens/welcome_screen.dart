@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../app/router/app_router.dart';
 import '../../../../shared/layout/psc_page_scaffold.dart';
 import '../../../../shared/widgets/psc_blocks.dart';
 
@@ -75,12 +76,12 @@ class WelcomeScreen extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           FilledButton(
-            onPressed: () => context.go('/onboarding/topics'),
+            onPressed: () => context.go(AppRoutePath.onboardingTopics),
             child: const Text('Start Setup'),
           ),
           const SizedBox(height: 8),
           OutlinedButton(
-            onPressed: () => context.go('/home'),
+            onPressed: () => context.go(AppRoutePath.home),
             child: const Text('Preview Sample Digest'),
           ),
         ],

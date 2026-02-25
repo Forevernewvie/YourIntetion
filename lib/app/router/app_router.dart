@@ -33,6 +33,9 @@ abstract final class AppRoutePath {
   static const String saved = '/saved';
   static const String notifications = '/notifications';
   static const String settings = '/settings';
+
+  /// Purpose: Build concrete digest detail path from digest identifier.
+  static String digestDetailById(String digestId) => '/detail/$digestId';
 }
 
 /// Purpose: Provide app router instance configured with all feature routes.

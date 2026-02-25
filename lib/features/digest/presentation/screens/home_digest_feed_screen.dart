@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../app/router/app_router.dart';
 import '../../../../shared/layout/psc_page_scaffold.dart';
 import '../../../../shared/widgets/digest_card_tile.dart';
 import '../../../../shared/widgets/psc_blocks.dart';
@@ -39,7 +40,9 @@ class HomeDigestFeedScreen extends ConsumerWidget {
                           final item = digest.items[index];
                           return DigestCardTile(
                             item: item,
-                            onTap: () => context.go('/detail/${digest.id}'),
+                            onTap: () => context.go(
+                              AppRoutePath.digestDetailById(digest.id),
+                            ),
                           );
                         },
                       )

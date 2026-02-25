@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../app/router/app_router.dart';
 import '../../../../shared/layout/psc_page_scaffold.dart';
 import '../../../../shared/widgets/psc_blocks.dart';
 
@@ -58,13 +59,15 @@ class SourcePreferenceScreen extends StatelessWidget {
                     flex: 70,
                     child: Container(color: theme.colorScheme.primary),
                   ),
-                  const Flexible(
+                  Flexible(
                     flex: 20,
-                    child: ColoredBox(color: Color(0xFFA86A00)),
+                    child: ColoredBox(
+                      color: theme.colorScheme.secondaryContainer,
+                    ),
                   ),
-                  const Flexible(
+                  Flexible(
                     flex: 10,
-                    child: ColoredBox(color: Color(0xFF1B8F5A)),
+                    child: ColoredBox(color: theme.colorScheme.tertiary),
                   ),
                 ],
               ),
@@ -72,12 +75,12 @@ class SourcePreferenceScreen extends StatelessWidget {
           ),
           const Spacer(),
           FilledButton(
-            onPressed: () => context.go('/onboarding/tone-frequency'),
+            onPressed: () => context.go(AppRoutePath.onboardingToneFrequency),
             child: const Text('Next: Tone & Frequency'),
           ),
           const SizedBox(height: 8),
           OutlinedButton(
-            onPressed: () => context.go('/onboarding/topics'),
+            onPressed: () => context.go(AppRoutePath.onboardingTopics),
             child: const Text('Back'),
           ),
         ],
