@@ -81,7 +81,7 @@ class WelcomeScreen extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           OutlinedButton(
-            onPressed: () => context.go(AppRoutePath.home),
+            onPressed: () => context.go(AppRoutePath.onboardingPreview),
             child: const Text('Preview Sample Digest'),
           ),
         ],

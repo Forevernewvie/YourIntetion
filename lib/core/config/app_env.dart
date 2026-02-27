@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 /// Purpose: Load and expose environment configuration with safe defaults.
@@ -25,6 +26,13 @@ final class AppEnv {
       return fromDotEnv;
     }
 
-    return 'http://127.0.0.1:8090';
+    if (kIsWeb) {
+      return 'http://127.0.0.1:8090';
+    }
+
+    return switch (defaultTargetPlatform) {
+      TargetPlatform.android => 'http://10.0.2.2:8090',
+      _ => 'http://127.0.0.1:8090',
+    };
   }
 }

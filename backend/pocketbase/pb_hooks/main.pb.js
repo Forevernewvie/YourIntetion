@@ -1221,3 +1221,953 @@ const pscApiHandler = (e) => {
 routerAdd("GET", "/v1/{rest...}", pscApiHandler)
 routerAdd("POST", "/v1/{rest...}", pscApiHandler)
 routerAdd("PATCH", "/v1/{rest...}", pscApiHandler)
+
+// Purpose: Read environment variable with fallback and no throwing side-effects.
+function authReadEnv(name, fallbackValue) {
+  const raw = $os.getenv(name)
+  if (!raw || !String(raw).trim()) {
+    return fallbackValue
+  }
+
+  return String(raw).trim()
+}
+
+// Purpose: Parse boolean-like environment values with explicit defaults.
+function authBoolEnv(name, fallbackValue) {
+  const raw = authReadEnv(name, "").toLowerCase()
+  if (!raw) {
+    return fallbackValue
+  }
+
+  return raw === "1" || raw === "true" || raw === "yes" || raw === "on"
+}
+
+// Purpose: Parse positive integer environment values while preserving deterministic defaults.
+function authPositiveIntEnv(name, fallbackValue) {
+  const parsed = Number(authReadEnv(name, ""))
+  if (Number.isNaN(parsed) || parsed <= 0) {
+    return fallbackValue
+  }
+
+  return Math.floor(parsed)
+}
+
+var authPolicyConfig = Object.freeze({
+  enabled: authBoolEnv("PSC_AUTH_POLICY_ENABLED", true),
+  traceIdLength: authPositiveIntEnv("PSC_TRACE_ID_LENGTH", 24),
+  loginWindowSeconds: authPositiveIntEnv("PSC_AUTH_LOGIN_WINDOW_SECONDS", 300),
+  loginMaxAttempts: authPositiveIntEnv("PSC_AUTH_LOGIN_MAX_ATTEMPTS", 8),
+  loginLockoutSeconds: authPositiveIntEnv("PSC_AUTH_LOGIN_LOCKOUT_SECONDS", 900),
+  verifyResendWindowSeconds: authPositiveIntEnv("PSC_AUTH_VERIFY_RESEND_WINDOW_SECONDS", 600),
+  verifyResendMaxAttempts: authPositiveIntEnv("PSC_AUTH_VERIFY_RESEND_MAX_ATTEMPTS", 3),
+  passwordResetWindowSeconds: authPositiveIntEnv("PSC_AUTH_PASSWORD_RESET_WINDOW_SECONDS", 600),
+  passwordResetMaxAttempts: authPositiveIntEnv("PSC_AUTH_PASSWORD_RESET_MAX_ATTEMPTS", 3),
+  verifyConfirmWindowSeconds: authPositiveIntEnv("PSC_AUTH_VERIFY_CONFIRM_WINDOW_SECONDS", 600),
+  verifyConfirmMaxAttempts: authPositiveIntEnv("PSC_AUTH_VERIFY_CONFIRM_MAX_ATTEMPTS", 10),
+  resetConfirmWindowSeconds: authPositiveIntEnv("PSC_AUTH_RESET_CONFIRM_WINDOW_SECONDS", 600),
+  resetConfirmMaxAttempts: authPositiveIntEnv("PSC_AUTH_RESET_CONFIRM_MAX_ATTEMPTS", 10),
+})
+
+// Purpose: Generate compact deterministic trace IDs for auth policy logs and error payloads.
+function authTraceId(event, action) {
+  const path = event && event.request ? String(event.request.url.path || "") : ""
+  const seed = `${Date.now()}|${Math.random()}|${action}|${path}`
+  return $security.sha256(seed).slice(0, authPolicyConfig.traceIdLength)
+}
+
+// Purpose: Safely resolve request IP for rate-limit scope without exposing raw identifiers.
+function authResolveIp(event) {
+  try {
+    const ip = event.realIP()
+    return String(ip || "unknown")
+  } catch (_) {
+    return "unknown"
+  }
+}
+
+function authHash(value) {
+  return $security.sha256(String(value || "").trim().toLowerCase())
+}
+
+// Purpose: Return minimal error response compatible with client-safe auth surfaces.
+function authReject(event, traceId, status, code, message, details) {
+  event.json(status, {
+    code,
+    message,
+    details: details || {},
+    traceId,
+  })
+}
+
+function authFindFirst(collectionName, filter, params) {
+  try {
+    return $app.findFirstRecordByFilter(collectionName, filter, params)
+  } catch (_) {
+    return null
+  }
+}
+
+function authWindowBucket(windowSeconds, nowMs) {
+  return `${windowSeconds}:${Math.floor(nowMs / (windowSeconds * 1000))}`
+}
+
+// Purpose: Increment per-window attempt counters for deterministic auth throttling.
+function authIncrementRate(action, scopeKey, windowSeconds, nowIsoValue) {
+  const nowMs = Date.parse(nowIsoValue)
+  const bucket = authWindowBucket(windowSeconds, nowMs)
+  const existing = authFindFirst(
+    "auth_rate_limits",
+    "action = {:action} && scope_key = {:scopeKey} && window_bucket = {:bucket}",
+    { action, scopeKey, bucket },
+  )
+
+  if (existing) {
+    const attempts = existing.getInt("attempts") + 1
+    existing.set("attempts", attempts)
+    existing.set("updated_at", nowIsoValue)
+    $app.save(existing)
+    return attempts
+  }
+
+  const collection = $app.findCollectionByNameOrId("auth_rate_limits")
+  const record = new Record(collection)
+  record.set("action", action)
+  record.set("scope_key", scopeKey)
+  record.set("window_bucket", bucket)
+  record.set("attempts", 1)
+  record.set("updated_at", nowIsoValue)
+  $app.save(record)
+  return 1
+}
+
+// Purpose: Resolve active lockout state and cleanup expired lock records.
+function authGetActiveLockout(action, scopeKey, nowMs) {
+  const record = authFindFirst("auth_lockouts", "action = {:action} && scope_key = {:scopeKey}", { action, scopeKey })
+  if (!record) {
+    return null
+  }
+
+  const lockedUntilIso = record.getString("locked_until")
+  const lockedUntilMs = Date.parse(lockedUntilIso)
+  if (Number.isNaN(lockedUntilMs) || lockedUntilMs <= nowMs) {
+    try {
+      $app.delete(record)
+    } catch (_) {
+      // Purposefully ignore cleanup errors to keep auth flow available.
+    }
+    return null
+  }
+
+  return {
+    record,
+    lockedUntilMs,
+  }
+}
+
+// Purpose: Upsert lockout record when abuse threshold is crossed.
+function authSetLockout(action, scopeKey, lockoutSeconds, failures, reason, nowIsoValue) {
+  const nowMs = Date.parse(nowIsoValue)
+  const lockedUntilIso = new Date(nowMs + (lockoutSeconds * 1000)).toISOString()
+
+  const existing = authFindFirst("auth_lockouts", "action = {:action} && scope_key = {:scopeKey}", { action, scopeKey })
+  if (existing) {
+    existing.set("locked_until", lockedUntilIso)
+    existing.set("reason", reason || "")
+    existing.set("failures", failures)
+    existing.set("updated_at", nowIsoValue)
+    $app.save(existing)
+    return existing
+  }
+
+  const collection = $app.findCollectionByNameOrId("auth_lockouts")
+  const record = new Record(collection)
+  record.set("action", action)
+  record.set("scope_key", scopeKey)
+  record.set("locked_until", lockedUntilIso)
+  record.set("reason", reason || "")
+  record.set("failures", failures)
+  record.set("updated_at", nowIsoValue)
+  $app.save(record)
+  return record
+}
+
+// Purpose: Remove stale lockout after successful authentication to minimize false positive friction.
+function authClearLockout(action, scopeKey) {
+  const existing = authFindFirst("auth_lockouts", "action = {:action} && scope_key = {:scopeKey}", { action, scopeKey })
+  if (!existing) {
+    return
+  }
+
+  try {
+    $app.delete(existing)
+  } catch (_) {
+    // Purposefully ignore clear errors to avoid blocking success path.
+  }
+}
+
+// Purpose: Persist security-relevant auth events in a redacted, operator-focused audit collection.
+function authAudit(input) {
+  try {
+    const collection = $app.findCollectionByNameOrId("auth_audit_logs")
+    const record = new Record(collection)
+    record.set("user", input.userId || "")
+    record.set("action", input.action)
+    record.set("success", Boolean(input.success))
+    record.set("scope_key", input.scopeKey || "")
+    record.set("ip", input.ipHash || "")
+    record.set("identity_hash", input.identityHash || "")
+    record.set("details", input.details || {})
+    record.set("created_at", new Date().toISOString())
+    $app.save(record)
+  } catch (_) {
+    $app.logger().warn("psc_auth_audit_skip", "context", JSON.stringify({ action: input.action || "unknown" }))
+  }
+}
+
+function authLog(level, message, payload) {
+  const context = JSON.stringify(payload || {})
+  if (level === "error") {
+    $app.logger().error(message, "context", context)
+    return
+  }
+
+  if (level === "warn") {
+    $app.logger().warn(message, "context", context)
+    return
+  }
+
+  $app.logger().info(message, "context", context)
+}
+
+function authHandleRateLimitFailure(input) {
+  authLog("warn", "psc_auth_policy_block", {
+    traceId: input.traceId,
+    action: input.action,
+    code: input.code,
+    scopeKey: input.scopeKey,
+    attempts: input.attempts,
+    retryAfterSeconds: input.retryAfterSeconds,
+    path: input.event && input.event.request ? String(input.event.request.url.path || "") : "",
+  })
+  authAudit({
+    action: input.action,
+    success: false,
+    scopeKey: input.scopeKey,
+    ipHash: input.ipHash,
+    identityHash: input.identityHash,
+    userId: "",
+    details: {
+      code: input.code,
+      attempts: input.attempts,
+      retryAfterSeconds: input.retryAfterSeconds,
+      traceId: input.traceId,
+    },
+  })
+  authReject(input.event, input.traceId, 429, input.code, input.message, {
+    retryAfterSeconds: input.retryAfterSeconds,
+  })
+}
+
+function authScope(label, key, lockoutEligible) {
+  return {
+    label,
+    key,
+    lockoutEligible: Boolean(lockoutEligible),
+  }
+}
+
+// Purpose: Enforce action-specific throttling policy with acyclic stage order:
+// active lockout check -> rate increment -> threshold decision -> optional lockout.
+function authEnforce(event, action, options) {
+  if (!authPolicyConfig.enabled) {
+    return {
+      allowed: true,
+      traceId: "",
+    }
+  }
+
+  const traceId = authTraceId(event, action)
+  const nowIsoValue = new Date().toISOString()
+  const nowMs = Date.parse(nowIsoValue)
+  const ipHash = authHash(authResolveIp(event)).slice(0, 24)
+  const identityHash = authHash(options.identityValue || "").slice(0, 24)
+  const scopes = options.scopes.filter((entry) => entry && entry.key)
+
+  if (scopes.length === 0) {
+    return {
+      allowed: true,
+      traceId,
+      identityHash,
+      ipHash,
+      scopes,
+    }
+  }
+
+  for (const scopeEntry of scopes) {
+    const activeLockout = authGetActiveLockout(action, scopeEntry.key, nowMs)
+    if (!activeLockout) {
+      continue
+    }
+
+    const retryAfterSeconds = Math.max(1, Math.ceil((activeLockout.lockedUntilMs - nowMs) / 1000))
+    authHandleRateLimitFailure({
+      event,
+      traceId,
+      action,
+      scopeKey: scopeEntry.key,
+      ipHash,
+      identityHash,
+      code: "AUTH_LOCKED",
+      message: "Too many attempts. Please try again later.",
+      retryAfterSeconds,
+      attempts: -1,
+    })
+    return {
+      allowed: false,
+      traceId,
+      identityHash,
+      ipHash,
+      scopes,
+    }
+  }
+
+  let exceeded = null
+  for (const scopeEntry of scopes) {
+    const attempts = authIncrementRate(action, scopeEntry.key, options.windowSeconds, nowIsoValue)
+    if (attempts > options.maxAttempts) {
+      exceeded = {
+        scopeEntry,
+        attempts,
+      }
+      break
+    }
+  }
+
+  if (!exceeded) {
+    authLog("info", "psc_auth_policy_allow", {
+      traceId,
+      action,
+      path: event && event.request ? String(event.request.url.path || "") : "",
+    })
+    return {
+      allowed: true,
+      traceId,
+      identityHash,
+      ipHash,
+      scopes,
+    }
+  }
+
+  if (options.lockoutSeconds > 0 && exceeded.scopeEntry.lockoutEligible) {
+    authSetLockout(
+      action,
+      exceeded.scopeEntry.key,
+      options.lockoutSeconds,
+      exceeded.attempts,
+      "threshold_exceeded",
+      nowIsoValue,
+    )
+    authHandleRateLimitFailure({
+      event,
+      traceId,
+      action,
+      scopeKey: exceeded.scopeEntry.key,
+      ipHash,
+      identityHash,
+      code: "AUTH_LOCKED",
+      message: "Too many attempts. Please try again later.",
+      retryAfterSeconds: options.lockoutSeconds,
+      attempts: exceeded.attempts,
+    })
+    return {
+      allowed: false,
+      traceId,
+      identityHash,
+      ipHash,
+      scopes,
+    }
+  }
+
+  authHandleRateLimitFailure({
+    event,
+    traceId,
+    action,
+    scopeKey: exceeded.scopeEntry.key,
+    ipHash,
+    identityHash,
+    code: "RATE_LIMITED",
+    message: "Request rate exceeded. Please retry later.",
+    retryAfterSeconds: options.windowSeconds,
+    attempts: exceeded.attempts,
+  })
+  return {
+    allowed: false,
+    traceId,
+    identityHash,
+    ipHash,
+    scopes,
+  }
+}
+
+onRecordAuthWithPasswordRequest((e) => {
+  const readInt = (name, fallbackValue) => {
+    const parsed = Number($os.getenv(name) || "")
+    if (Number.isNaN(parsed) || parsed <= 0) {
+      return fallbackValue
+    }
+    return Math.floor(parsed)
+  }
+  const readBool = (name, fallbackValue) => {
+    const raw = String($os.getenv(name) || "").trim().toLowerCase()
+    if (!raw) {
+      return fallbackValue
+    }
+    return raw === "1" || raw === "true" || raw === "yes" || raw === "on"
+  }
+  const enabled = readBool("PSC_AUTH_POLICY_ENABLED", true)
+  if (!enabled) {
+    e.next()
+    return
+  }
+
+  const hash = (value) => $security.sha256(String(value || "").trim().toLowerCase()).slice(0, 24)
+  const findFirst = (collectionName, filter, params) => {
+    try {
+      return $app.findFirstRecordByFilter(collectionName, filter, params)
+    } catch (_) {
+      return null
+    }
+  }
+  const traceId = $security
+    .sha256(`${Date.now()}|${Math.random()}|login|${String(e.request ? e.request.url.path || "" : "")}`)
+    .slice(0, readInt("PSC_TRACE_ID_LENGTH", 24))
+  const nowIsoValue = new Date().toISOString()
+  const nowMs = Date.parse(nowIsoValue)
+  const loginWindowSeconds = readInt("PSC_AUTH_LOGIN_WINDOW_SECONDS", 300)
+  const loginMaxAttempts = readInt("PSC_AUTH_LOGIN_MAX_ATTEMPTS", 8)
+  const loginLockoutSeconds = readInt("PSC_AUTH_LOGIN_LOCKOUT_SECONDS", 900)
+
+  const reject = (code, message, retryAfterSeconds) => {
+    e.json(429, {
+      code,
+      message,
+      details: {
+        retryAfterSeconds,
+      },
+      traceId,
+    })
+  }
+
+  const upsertRate = (scopeKey) => {
+    const windowBucket = `${loginWindowSeconds}:${Math.floor(nowMs / (loginWindowSeconds * 1000))}`
+    const existing = findFirst(
+      "auth_rate_limits",
+      "action = {:action} && scope_key = {:scopeKey} && window_bucket = {:bucket}",
+      {
+        action: "login",
+        scopeKey,
+        bucket: windowBucket,
+      },
+    )
+
+    if (existing) {
+      const attempts = existing.getInt("attempts") + 1
+      existing.set("attempts", attempts)
+      existing.set("updated_at", nowIsoValue)
+      $app.save(existing)
+      return attempts
+    }
+
+    const collection = $app.findCollectionByNameOrId("auth_rate_limits")
+    const record = new Record(collection)
+    record.set("action", "login")
+    record.set("scope_key", scopeKey)
+    record.set("window_bucket", windowBucket)
+    record.set("attempts", 1)
+    record.set("updated_at", nowIsoValue)
+    $app.save(record)
+    return 1
+  }
+
+  const setLockout = (scopeKey, failures) => {
+    const existing = findFirst("auth_lockouts", "action = {:action} && scope_key = {:scopeKey}", {
+      action: "login",
+      scopeKey,
+    })
+    const lockedUntil = new Date(nowMs + (loginLockoutSeconds * 1000)).toISOString()
+
+    if (existing) {
+      existing.set("locked_until", lockedUntil)
+      existing.set("reason", "threshold_exceeded")
+      existing.set("failures", failures)
+      existing.set("updated_at", nowIsoValue)
+      $app.save(existing)
+      return
+    }
+
+    const collection = $app.findCollectionByNameOrId("auth_lockouts")
+    const record = new Record(collection)
+    record.set("action", "login")
+    record.set("scope_key", scopeKey)
+    record.set("locked_until", lockedUntil)
+    record.set("reason", "threshold_exceeded")
+    record.set("failures", failures)
+    record.set("updated_at", nowIsoValue)
+    $app.save(record)
+  }
+
+  const clearLockout = (scopeKey) => {
+    const existing = findFirst("auth_lockouts", "action = {:action} && scope_key = {:scopeKey}", {
+      action: "login",
+      scopeKey,
+    })
+    if (!existing) {
+      return
+    }
+
+    try {
+      $app.delete(existing)
+    } catch (_) {
+      // ignore
+    }
+  }
+
+  const appendAudit = (success, scopeKey, ipHash, identityHash, userId, details) => {
+    try {
+      const collection = $app.findCollectionByNameOrId("auth_audit_logs")
+      const record = new Record(collection)
+      record.set("user", userId || "")
+      record.set("action", "login")
+      record.set("success", Boolean(success))
+      record.set("scope_key", scopeKey)
+      record.set("ip", ipHash)
+      record.set("identity_hash", identityHash)
+      record.set("details", details || {})
+      record.set("created_at", new Date().toISOString())
+      $app.save(record)
+    } catch (_) {
+      // ignore
+    }
+  }
+
+  const normalizedIdentity = String(e.identity || "").trim().toLowerCase()
+  const identityHash = hash(normalizedIdentity || "missing")
+  const ipHash = hash((() => {
+    try {
+      return e.realIP()
+    } catch (_) {
+      return "unknown"
+    }
+  })())
+  const identityScope = `identity:${identityHash}`
+  const ipScope = `ip:${ipHash}`
+
+  const activeLockout = findFirst("auth_lockouts", "action = {:action} && scope_key = {:scopeKey}", {
+    action: "login",
+    scopeKey: identityScope,
+  })
+  if (activeLockout) {
+    const lockUntilMs = Date.parse(activeLockout.getString("locked_until"))
+    if (!Number.isNaN(lockUntilMs) && lockUntilMs > nowMs) {
+      const retryAfterSeconds = Math.max(1, Math.ceil((lockUntilMs - nowMs) / 1000))
+      appendAudit(false, identityScope, ipHash, identityHash, "", {
+        traceId,
+        code: "AUTH_LOCKED",
+        retryAfterSeconds,
+      })
+      reject("AUTH_LOCKED", "Too many attempts. Please try again later.", retryAfterSeconds)
+      return
+    }
+  }
+
+  const identityAttempts = upsertRate(identityScope)
+  const ipAttempts = upsertRate(ipScope)
+  const highestAttempts = Math.max(identityAttempts, ipAttempts)
+  if (highestAttempts > loginMaxAttempts) {
+    if (identityAttempts > loginMaxAttempts) {
+      setLockout(identityScope, identityAttempts)
+      appendAudit(false, identityScope, ipHash, identityHash, "", {
+        traceId,
+        code: "AUTH_LOCKED",
+        attempts: highestAttempts,
+        retryAfterSeconds: loginLockoutSeconds,
+      })
+      reject("AUTH_LOCKED", "Too many attempts. Please try again later.", loginLockoutSeconds)
+      return
+    }
+
+    appendAudit(false, ipScope, ipHash, identityHash, "", {
+      traceId,
+      code: "RATE_LIMITED",
+      attempts: highestAttempts,
+      retryAfterSeconds: loginWindowSeconds,
+    })
+    reject("RATE_LIMITED", "Request rate exceeded. Please retry later.", loginWindowSeconds)
+    return
+  }
+
+  const startedAt = Date.now()
+  try {
+    e.next()
+    const success = Boolean(e.record && e.record.id)
+    if (success) {
+      clearLockout(identityScope)
+    }
+    appendAudit(success, identityScope, ipHash, identityHash, success ? e.record.id : "", {
+      traceId,
+      durationMs: Date.now() - startedAt,
+    })
+  } catch (error) {
+    appendAudit(false, identityScope, ipHash, identityHash, "", {
+      traceId,
+      durationMs: Date.now() - startedAt,
+    })
+    throw error
+  }
+}, "users")
+
+onRecordRequestVerificationRequest((e) => {
+  const readInt = (name, fallbackValue) => {
+    const parsed = Number($os.getenv(name) || "")
+    if (Number.isNaN(parsed) || parsed <= 0) {
+      return fallbackValue
+    }
+    return Math.floor(parsed)
+  }
+  const readBool = (name, fallbackValue) => {
+    const raw = String($os.getenv(name) || "").trim().toLowerCase()
+    if (!raw) {
+      return fallbackValue
+    }
+    return raw === "1" || raw === "true" || raw === "yes" || raw === "on"
+  }
+  if (!readBool("PSC_AUTH_POLICY_ENABLED", true)) {
+    e.next()
+    return
+  }
+
+  const windowSeconds = readInt("PSC_AUTH_VERIFY_RESEND_WINDOW_SECONDS", 600)
+  const maxAttempts = readInt("PSC_AUTH_VERIFY_RESEND_MAX_ATTEMPTS", 3)
+  const traceId = $security
+    .sha256(`${Date.now()}|${Math.random()}|verify_resend`)
+    .slice(0, readInt("PSC_TRACE_ID_LENGTH", 24))
+  const nowIsoValue = new Date().toISOString()
+  const nowMs = Date.parse(nowIsoValue)
+  const hash = (value) => $security.sha256(String(value || "").trim().toLowerCase()).slice(0, 24)
+  const ipHash = hash((() => {
+    try {
+      return e.realIP()
+    } catch (_) {
+      return "unknown"
+    }
+  })())
+  const scopeKey = `ip:${ipHash}`
+  const bucket = `${windowSeconds}:${Math.floor(nowMs / (windowSeconds * 1000))}`
+
+  const findFirst = (collectionName, filter, params) => {
+    try {
+      return $app.findFirstRecordByFilter(collectionName, filter, params)
+    } catch (_) {
+      return null
+    }
+  }
+
+  const existing = findFirst(
+    "auth_rate_limits",
+    "action = {:action} && scope_key = {:scopeKey} && window_bucket = {:bucket}",
+    { action: "verify_resend", scopeKey, bucket },
+  )
+
+  let attempts = 1
+  if (existing) {
+    attempts = existing.getInt("attempts") + 1
+    existing.set("attempts", attempts)
+    existing.set("updated_at", nowIsoValue)
+    $app.save(existing)
+  } else {
+    const rateCollection = $app.findCollectionByNameOrId("auth_rate_limits")
+    const rateRecord = new Record(rateCollection)
+    rateRecord.set("action", "verify_resend")
+    rateRecord.set("scope_key", scopeKey)
+    rateRecord.set("window_bucket", bucket)
+    rateRecord.set("attempts", attempts)
+    rateRecord.set("updated_at", nowIsoValue)
+    $app.save(rateRecord)
+  }
+
+  if (attempts > maxAttempts) {
+    e.json(429, {
+      code: "RATE_LIMITED",
+      message: "Request rate exceeded. Please retry later.",
+      details: {
+        retryAfterSeconds: windowSeconds,
+      },
+      traceId,
+    })
+    return
+  }
+
+  e.next()
+}, "users")
+
+onRecordRequestPasswordResetRequest((e) => {
+  const readInt = (name, fallbackValue) => {
+    const parsed = Number($os.getenv(name) || "")
+    if (Number.isNaN(parsed) || parsed <= 0) {
+      return fallbackValue
+    }
+    return Math.floor(parsed)
+  }
+  const readBool = (name, fallbackValue) => {
+    const raw = String($os.getenv(name) || "").trim().toLowerCase()
+    if (!raw) {
+      return fallbackValue
+    }
+    return raw === "1" || raw === "true" || raw === "yes" || raw === "on"
+  }
+  if (!readBool("PSC_AUTH_POLICY_ENABLED", true)) {
+    e.next()
+    return
+  }
+
+  const windowSeconds = readInt("PSC_AUTH_PASSWORD_RESET_WINDOW_SECONDS", 600)
+  const maxAttempts = readInt("PSC_AUTH_PASSWORD_RESET_MAX_ATTEMPTS", 3)
+  const traceId = $security
+    .sha256(`${Date.now()}|${Math.random()}|password_reset`)
+    .slice(0, readInt("PSC_TRACE_ID_LENGTH", 24))
+  const nowIsoValue = new Date().toISOString()
+  const nowMs = Date.parse(nowIsoValue)
+  const hash = (value) => $security.sha256(String(value || "").trim().toLowerCase()).slice(0, 24)
+  const ipHash = hash((() => {
+    try {
+      return e.realIP()
+    } catch (_) {
+      return "unknown"
+    }
+  })())
+  const scopeKey = `ip:${ipHash}`
+  const bucket = `${windowSeconds}:${Math.floor(nowMs / (windowSeconds * 1000))}`
+
+  const findFirst = (collectionName, filter, params) => {
+    try {
+      return $app.findFirstRecordByFilter(collectionName, filter, params)
+    } catch (_) {
+      return null
+    }
+  }
+
+  const existing = findFirst(
+    "auth_rate_limits",
+    "action = {:action} && scope_key = {:scopeKey} && window_bucket = {:bucket}",
+    { action: "password_reset", scopeKey, bucket },
+  )
+
+  let attempts = 1
+  if (existing) {
+    attempts = existing.getInt("attempts") + 1
+    existing.set("attempts", attempts)
+    existing.set("updated_at", nowIsoValue)
+    $app.save(existing)
+  } else {
+    const rateCollection = $app.findCollectionByNameOrId("auth_rate_limits")
+    const rateRecord = new Record(rateCollection)
+    rateRecord.set("action", "password_reset")
+    rateRecord.set("scope_key", scopeKey)
+    rateRecord.set("window_bucket", bucket)
+    rateRecord.set("attempts", attempts)
+    rateRecord.set("updated_at", nowIsoValue)
+    $app.save(rateRecord)
+  }
+
+  if (attempts > maxAttempts) {
+    e.json(429, {
+      code: "RATE_LIMITED",
+      message: "Request rate exceeded. Please retry later.",
+      details: {
+        retryAfterSeconds: windowSeconds,
+      },
+      traceId,
+    })
+    return
+  }
+
+  e.next()
+}, "users")
+
+onRecordConfirmVerificationRequest((e) => {
+  const readInt = (name, fallbackValue) => {
+    const parsed = Number($os.getenv(name) || "")
+    if (Number.isNaN(parsed) || parsed <= 0) {
+      return fallbackValue
+    }
+    return Math.floor(parsed)
+  }
+  const readBool = (name, fallbackValue) => {
+    const raw = String($os.getenv(name) || "").trim().toLowerCase()
+    if (!raw) {
+      return fallbackValue
+    }
+    return raw === "1" || raw === "true" || raw === "yes" || raw === "on"
+  }
+  if (!readBool("PSC_AUTH_POLICY_ENABLED", true)) {
+    e.next()
+    return
+  }
+
+  const windowSeconds = readInt("PSC_AUTH_VERIFY_CONFIRM_WINDOW_SECONDS", 600)
+  const maxAttempts = readInt("PSC_AUTH_VERIFY_CONFIRM_MAX_ATTEMPTS", 10)
+  const traceId = $security
+    .sha256(`${Date.now()}|${Math.random()}|verify_confirm`)
+    .slice(0, readInt("PSC_TRACE_ID_LENGTH", 24))
+  const nowIsoValue = new Date().toISOString()
+  const nowMs = Date.parse(nowIsoValue)
+  const hash = (value) => $security.sha256(String(value || "").trim().toLowerCase()).slice(0, 24)
+  const requestInfo = e.requestInfo()
+  const token = requestInfo && requestInfo.body ? String(requestInfo.body.token || "").trim() : ""
+  const tokenHash = hash(token || "missing-token")
+  const ipHash = hash((() => {
+    try {
+      return e.realIP()
+    } catch (_) {
+      return "unknown"
+    }
+  })())
+  const scopes = [`ip:${ipHash}`, `token:${tokenHash}`]
+  const bucket = `${windowSeconds}:${Math.floor(nowMs / (windowSeconds * 1000))}`
+
+  const findFirst = (collectionName, filter, params) => {
+    try {
+      return $app.findFirstRecordByFilter(collectionName, filter, params)
+    } catch (_) {
+      return null
+    }
+  }
+
+  for (const scopeKey of scopes) {
+    const existing = findFirst(
+      "auth_rate_limits",
+      "action = {:action} && scope_key = {:scopeKey} && window_bucket = {:bucket}",
+      { action: "verify_confirm", scopeKey, bucket },
+    )
+
+    let attempts = 1
+    if (existing) {
+      attempts = existing.getInt("attempts") + 1
+      existing.set("attempts", attempts)
+      existing.set("updated_at", nowIsoValue)
+      $app.save(existing)
+    } else {
+      const rateCollection = $app.findCollectionByNameOrId("auth_rate_limits")
+      const rateRecord = new Record(rateCollection)
+      rateRecord.set("action", "verify_confirm")
+      rateRecord.set("scope_key", scopeKey)
+      rateRecord.set("window_bucket", bucket)
+      rateRecord.set("attempts", attempts)
+      rateRecord.set("updated_at", nowIsoValue)
+      $app.save(rateRecord)
+    }
+
+    if (attempts > maxAttempts) {
+      e.json(429, {
+        code: "RATE_LIMITED",
+        message: "Request rate exceeded. Please retry later.",
+        details: {
+          retryAfterSeconds: windowSeconds,
+        },
+        traceId,
+      })
+      return
+    }
+  }
+
+  e.next()
+}, "users")
+
+onRecordConfirmPasswordResetRequest((e) => {
+  const readInt = (name, fallbackValue) => {
+    const parsed = Number($os.getenv(name) || "")
+    if (Number.isNaN(parsed) || parsed <= 0) {
+      return fallbackValue
+    }
+    return Math.floor(parsed)
+  }
+  const readBool = (name, fallbackValue) => {
+    const raw = String($os.getenv(name) || "").trim().toLowerCase()
+    if (!raw) {
+      return fallbackValue
+    }
+    return raw === "1" || raw === "true" || raw === "yes" || raw === "on"
+  }
+  if (!readBool("PSC_AUTH_POLICY_ENABLED", true)) {
+    e.next()
+    return
+  }
+
+  const windowSeconds = readInt("PSC_AUTH_RESET_CONFIRM_WINDOW_SECONDS", 600)
+  const maxAttempts = readInt("PSC_AUTH_RESET_CONFIRM_MAX_ATTEMPTS", 10)
+  const traceId = $security
+    .sha256(`${Date.now()}|${Math.random()}|reset_confirm`)
+    .slice(0, readInt("PSC_TRACE_ID_LENGTH", 24))
+  const nowIsoValue = new Date().toISOString()
+  const nowMs = Date.parse(nowIsoValue)
+  const hash = (value) => $security.sha256(String(value || "").trim().toLowerCase()).slice(0, 24)
+  const requestInfo = e.requestInfo()
+  const token = requestInfo && requestInfo.body ? String(requestInfo.body.token || "").trim() : ""
+  const tokenHash = hash(token || "missing-token")
+  const ipHash = hash((() => {
+    try {
+      return e.realIP()
+    } catch (_) {
+      return "unknown"
+    }
+  })())
+  const scopes = [`ip:${ipHash}`, `token:${tokenHash}`]
+  const bucket = `${windowSeconds}:${Math.floor(nowMs / (windowSeconds * 1000))}`
+
+  const findFirst = (collectionName, filter, params) => {
+    try {
+      return $app.findFirstRecordByFilter(collectionName, filter, params)
+    } catch (_) {
+      return null
+    }
+  }
+
+  for (const scopeKey of scopes) {
+    const existing = findFirst(
+      "auth_rate_limits",
+      "action = {:action} && scope_key = {:scopeKey} && window_bucket = {:bucket}",
+      { action: "reset_confirm", scopeKey, bucket },
+    )
+
+    let attempts = 1
+    if (existing) {
+      attempts = existing.getInt("attempts") + 1
+      existing.set("attempts", attempts)
+      existing.set("updated_at", nowIsoValue)
+      $app.save(existing)
+    } else {
+      const rateCollection = $app.findCollectionByNameOrId("auth_rate_limits")
+      const rateRecord = new Record(rateCollection)
+      rateRecord.set("action", "reset_confirm")
+      rateRecord.set("scope_key", scopeKey)
+      rateRecord.set("window_bucket", bucket)
+      rateRecord.set("attempts", attempts)
+      rateRecord.set("updated_at", nowIsoValue)
+      $app.save(rateRecord)
+    }
+
+    if (attempts > maxAttempts) {
+      e.json(429, {
+        code: "RATE_LIMITED",
+        message: "Request rate exceeded. Please retry later.",
+        details: {
+          retryAfterSeconds: windowSeconds,
+        },
+        traceId,
+      })
+      return
+    }
+  }
+
+  e.next()
+}, "users")

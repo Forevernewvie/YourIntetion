@@ -44,6 +44,14 @@ migrate((app) => {
       }))
     }
 
+    collection.authRule = ""
+    collection.manageRule = ownAuthRule
+    if (!collection.passwordAuth) {
+      collection.passwordAuth = {}
+    }
+    collection.passwordAuth.enabled = true
+    collection.passwordAuth.identityFields = ["email"]
+
     collection.listRule = ownAuthRule
     collection.viewRule = ownAuthRule
     collection.createRule = ""

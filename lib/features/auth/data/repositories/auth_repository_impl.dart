@@ -75,6 +75,77 @@ final class AuthRepositoryImpl implements AuthRepository {
     }
   }
 
+  /// Purpose: Trigger verification email resend with abuse-safe backend controls.
+  @override
+  Future<void> resendVerification({required String email}) async {
+    try {
+      await _remote.requestEmailVerification(email: email);
+    } on DioException catch (error) {
+      throw _mapDioFailure(
+        error,
+        fallbackMessage: 'Unable to send verification email. Please retry.',
+      );
+    }
+  }
+
+  /// Purpose: Confirm email verification token and update account verification state.
+  @override
+  Future<void> confirmEmailVerification({required String token}) async {
+    try {
+      await _remote.confirmEmailVerification(token: token);
+    } on DioException catch (error) {
+      throw _mapDioFailure(
+        error,
+        fallbackMessage: 'Verification link is invalid or expired.',
+      );
+    }
+  }
+
+  /// Purpose: Trigger password reset mail delivery with anti-enumeration messaging.
+  @override
+  Future<void> requestPasswordReset({required String email}) async {
+    try {
+      await _remote.requestPasswordReset(email: email);
+    } on DioException catch (error) {
+      throw _mapDioFailure(
+        error,
+        fallbackMessage:
+            'If the account exists, password reset instructions were sent.',
+      );
+    }
+  }
+
+  /// Purpose: Confirm password reset and invalidate compromised credentials.
+  @override
+  Future<void> confirmPasswordReset({
+    required String token,
+    required String password,
+  }) async {
+    try {
+      await _remote.confirmPasswordReset(token: token, password: password);
+    } on DioException catch (error) {
+      throw _mapDioFailure(
+        error,
+        fallbackMessage: 'Reset link is invalid or expired.',
+      );
+    }
+  }
+
+  /// Purpose: Refresh authenticated session and persist latest verified/account flags.
+  @override
+  Future<AuthSession> refreshSession() async {
+    try {
+      final session = await _remote.refreshSession();
+      await _local.saveSession(session);
+      return session;
+    } on DioException catch (error) {
+      throw _mapDioFailure(
+        error,
+        fallbackMessage: 'Unable to refresh session.',
+      );
+    }
+  }
+
   /// Purpose: Restore persisted local session without network dependency.
   @override
   Future<AuthSession?> restoreSession() {
@@ -97,6 +168,12 @@ final class AuthRepositoryImpl implements AuthRepository {
       return const AppFailure(
         code: AppErrorCode.netUnauthorized,
         message: 'Authentication failed.',
+      );
+    }
+    if (statusCode == 429) {
+      return const AppFailure(
+        code: AppErrorCode.apiBadResponse,
+        message: 'Too many requests. Please wait and try again.',
       );
     }
     if (statusCode >= 400 && statusCode < 500) {

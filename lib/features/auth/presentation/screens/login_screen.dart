@@ -111,8 +111,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 return null;
               },
             ),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: isLoading
+                    ? null
+                    : () => context.go(AppRoutePath.forgotPassword),
+                child: const Text('Forgot password?'),
+              ),
+            ),
             if (errorMessage != null) ...[
-              const SizedBox(height: 12),
+              const SizedBox(height: 4),
               Text(
                 errorMessage,
                 style: theme.textTheme.bodySmall?.copyWith(

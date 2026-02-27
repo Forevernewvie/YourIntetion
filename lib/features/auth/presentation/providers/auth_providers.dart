@@ -81,10 +81,53 @@ class AuthController extends AsyncNotifier<AuthSession?> {
     state = const AsyncData(null);
   }
 
+  /// Purpose: Request verification email delivery for the current user.
+  Future<void> resendVerification({required String email}) {
+    return ref.read(authRepositoryProvider).resendVerification(email: email);
+  }
+
+  /// Purpose: Confirm verification token and refresh session verification flags.
+  Future<void> confirmEmailVerification({required String token}) async {
+    await ref
+        .read(authRepositoryProvider)
+        .confirmEmailVerification(token: token);
+    final refreshed = await ref.read(authRepositoryProvider).refreshSession();
+    _syncSessionProviders(refreshed);
+    state = AsyncData(refreshed);
+  }
+
+  /// Purpose: Request password reset email without exposing account existence.
+  Future<void> requestPasswordReset({required String email}) {
+    return ref.read(authRepositoryProvider).requestPasswordReset(email: email);
+  }
+
+  /// Purpose: Confirm password reset with token and replacement password.
+  Future<void> confirmPasswordReset({
+    required String token,
+    required String password,
+  }) {
+    return ref
+        .read(authRepositoryProvider)
+        .confirmPasswordReset(token: token, password: password);
+  }
+
+  /// Purpose: Refresh current session state from backend and sync providers.
+  Future<void> refreshSession() async {
+    final current = state.valueOrNull;
+    if (current == null) {
+      return;
+    }
+    final refreshed = await ref.read(authRepositoryProvider).refreshSession();
+    _syncSessionProviders(refreshed);
+    state = AsyncData(refreshed);
+  }
+
   /// Purpose: Synchronize core session providers used by router and networking.
   void _syncSessionProviders(AuthSession? session) {
     ref.read(accessTokenProvider.notifier).state = session?.token;
     ref.read(currentUserIdProvider.notifier).state = session?.userId;
     ref.read(currentUserEmailProvider.notifier).state = session?.email;
+    ref.read(currentUserVerifiedProvider.notifier).state =
+        session?.isVerified ?? false;
   }
 }

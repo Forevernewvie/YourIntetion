@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../../app/router/app_router.dart';
 import '../../../../core/session/session_providers.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
+import '../../../onboarding/presentation/providers/onboarding_providers.dart';
 import '../../../../shared/layout/psc_page_scaffold.dart';
 import '../../../../shared/widgets/psc_blocks.dart';
 import '../../../../shared/widgets/psc_bottom_nav.dart';
@@ -59,6 +62,17 @@ class SettingsPrivacyScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
           const PscStateRowCard(label: 'Theme', value: 'System (Light/Dark)'),
+          const SizedBox(height: 8),
+          OutlinedButton(
+            onPressed: () async {
+              await ref.read(onboardingStatusProvider.notifier).reset();
+              if (!context.mounted) {
+                return;
+              }
+              context.go(AppRoutePath.welcome);
+            },
+            child: const Text('Replay Onboarding'),
+          ),
           const SizedBox(height: 12),
           FilledButton.tonal(
             onPressed: () =>

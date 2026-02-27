@@ -2,11 +2,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/auth/presentation/providers/auth_providers.dart';
+import '../../features/auth/presentation/screens/email_verification_pending_screen.dart';
+import '../../features/auth/presentation/screens/forgot_password_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
+import '../../features/auth/presentation/screens/reset_password_screen.dart';
 import '../../features/auth/presentation/screens/sign_up_screen.dart';
+import '../../features/auth/presentation/screens/verification_result_screen.dart';
 import '../../features/digest/presentation/screens/digest_detail_screen.dart';
 import '../../features/digest/presentation/screens/home_digest_feed_screen.dart';
 import '../../features/feedback/presentation/screens/feedback_tuning_screen.dart';
+import '../../features/onboarding/presentation/providers/onboarding_providers.dart';
+import '../../features/onboarding/presentation/screens/first_digest_preview_screen.dart';
 import '../../features/notifications/presentation/screens/notification_preferences_screen.dart';
 import '../../features/onboarding/presentation/screens/source_preference_screen.dart';
 import '../../features/onboarding/presentation/screens/tone_frequency_screen.dart';
@@ -21,10 +27,15 @@ import '../../features/settings/presentation/screens/settings_privacy_screen.dar
 abstract final class AppRoutePath {
   static const String login = '/login';
   static const String signUp = '/signup';
+  static const String forgotPassword = '/forgot-password';
+  static const String resetPassword = '/reset-password';
+  static const String verifyPending = '/verify-pending';
+  static const String verifyResult = '/verify';
   static const String welcome = '/welcome';
   static const String onboardingTopics = '/onboarding/topics';
   static const String onboardingSources = '/onboarding/sources';
   static const String onboardingToneFrequency = '/onboarding/tone-frequency';
+  static const String onboardingPreview = '/onboarding/preview';
   static const String home = '/home';
   static const String digestDetail = '/detail/:digestId';
   static const String rulesBasic = '/rules/basic';
@@ -41,20 +52,58 @@ abstract final class AppRoutePath {
 /// Purpose: Provide app router instance configured with all feature routes.
 final appRouterProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authControllerProvider);
-  final isAuthenticated = authState.valueOrNull != null;
+  final onboardingState = ref.watch(onboardingStatusProvider);
+  final session = authState.valueOrNull;
+  final isAuthenticated = session != null;
+  final isVerified = session?.isVerified ?? false;
+  final isOnboardingCompleted = onboardingState.valueOrNull ?? false;
 
   return GoRouter(
     initialLocation: AppRoutePath.login,
     redirect: (_, state) {
-      final path = state.uri.path;
-      final isAuthRoute =
-          path == AppRoutePath.login || path == AppRoutePath.signUp;
+      if (authState.isLoading || onboardingState.isLoading) {
+        return null;
+      }
 
-      if (!isAuthenticated && !isAuthRoute) {
+      final path = state.uri.path;
+      final isAuthRoute = {
+        AppRoutePath.login,
+        AppRoutePath.signUp,
+        AppRoutePath.forgotPassword,
+        AppRoutePath.resetPassword,
+      }.contains(path);
+      final isVerificationRoute = {
+        AppRoutePath.verifyPending,
+        AppRoutePath.verifyResult,
+      }.contains(path);
+      final isPublicVerificationRoute = path == AppRoutePath.verifyResult;
+      final isOnboardingRoute = {
+        AppRoutePath.welcome,
+        AppRoutePath.onboardingTopics,
+        AppRoutePath.onboardingSources,
+        AppRoutePath.onboardingToneFrequency,
+        AppRoutePath.onboardingPreview,
+      }.contains(path);
+
+      if (!isAuthenticated && !isAuthRoute && !isPublicVerificationRoute) {
         return AppRoutePath.login;
       }
 
-      if (isAuthenticated && isAuthRoute) {
+      if (isAuthenticated && !isVerified && !isVerificationRoute) {
+        return AppRoutePath.verifyPending;
+      }
+
+      if (isAuthenticated &&
+          isVerified &&
+          !isOnboardingCompleted &&
+          !isOnboardingRoute) {
+        return AppRoutePath.welcome;
+      }
+
+      if (isAuthenticated &&
+          isVerified &&
+          isOnboardingCompleted &&
+          (isAuthRoute || isVerificationRoute || isOnboardingRoute)) {
         return AppRoutePath.home;
       }
 
@@ -68,6 +117,26 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutePath.signUp,
         builder: (context, state) => const SignUpScreen(),
+      ),
+      GoRoute(
+        path: AppRoutePath.forgotPassword,
+        builder: (context, state) => const ForgotPasswordScreen(),
+      ),
+      GoRoute(
+        path: AppRoutePath.resetPassword,
+        builder: (context, state) => ResetPasswordScreen(
+          initialToken: state.uri.queryParameters['token'] ?? '',
+        ),
+      ),
+      GoRoute(
+        path: AppRoutePath.verifyPending,
+        builder: (context, state) => const EmailVerificationPendingScreen(),
+      ),
+      GoRoute(
+        path: AppRoutePath.verifyResult,
+        builder: (context, state) => VerificationResultScreen(
+          token: state.uri.queryParameters['token'] ?? '',
+        ),
       ),
       GoRoute(
         path: AppRoutePath.welcome,
@@ -84,6 +153,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutePath.onboardingToneFrequency,
         builder: (context, state) => const ToneFrequencyScreen(),
+      ),
+      GoRoute(
+        path: AppRoutePath.onboardingPreview,
+        builder: (context, state) => const FirstDigestPreviewScreen(),
       ),
       GoRoute(
         path: AppRoutePath.home,
