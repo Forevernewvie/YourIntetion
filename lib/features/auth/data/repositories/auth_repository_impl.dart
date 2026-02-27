@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 
 import '../../../../core/error/app_failure.dart';
 import '../../../../core/logging/app_logger.dart';
+import '../../../../core/network/dio_failure_mapper.dart';
 import '../../domain/entities/auth_session.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../datasources/auth_local_data_source.dart';
@@ -18,6 +19,8 @@ final class AuthRepositoryImpl implements AuthRepository {
 
   final AuthRemoteDataSource _remote;
   final AuthLocalDataSource _local;
+  static const String _authTimeoutMessage =
+      'Network timeout while authenticating.';
 
   /// Purpose: Authenticate existing user and persist resulting session.
   @override
@@ -163,38 +166,14 @@ final class AuthRepositoryImpl implements AuthRepository {
     DioException error, {
     required String fallbackMessage,
   }) {
-    final statusCode = error.response?.statusCode ?? 0;
-    if (statusCode == 401 || statusCode == 403) {
-      return const AppFailure(
-        code: AppErrorCode.netUnauthorized,
-        message: 'Authentication failed.',
-      );
-    }
-    if (statusCode == 429) {
-      return const AppFailure(
-        code: AppErrorCode.apiBadResponse,
-        message: 'Too many requests. Please wait and try again.',
-      );
-    }
-    if (statusCode >= 400 && statusCode < 500) {
-      return AppFailure(
-        code: AppErrorCode.apiBadResponse,
-        message: fallbackMessage,
-        cause: error,
-      );
-    }
-    if (error.type == DioExceptionType.connectionTimeout ||
-        error.type == DioExceptionType.receiveTimeout ||
-        error.type == DioExceptionType.sendTimeout) {
-      return const AppFailure(
-        code: AppErrorCode.netTimeout,
-        message: 'Network timeout while authenticating.',
-      );
-    }
-    return AppFailure(
-      code: AppErrorCode.unknown,
-      message: fallbackMessage,
-      cause: error,
+    return DioFailureMapper.map(
+      error,
+      messages: DioFailureMessages(
+        fallbackMessage: fallbackMessage,
+        timeoutMessage: _authTimeoutMessage,
+        unauthorizedMessage: 'Authentication failed.',
+        tooManyRequestsMessage: 'Too many requests. Please wait and try again.',
+      ),
     );
   }
 }
