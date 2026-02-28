@@ -4,8 +4,11 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
 
+PB_DIR_WAS_EXPLICIT="${PB_DIR+x}"
 PB_BIN="${PB_BIN:-${ROOT_DIR}/backend/pocketbase/pocketbase}"
 PB_DIR="${PB_DIR:-${ROOT_DIR}/backend/pocketbase/pb_data}"
+PB_HOOKS_DIR="${PB_HOOKS_DIR:-${ROOT_DIR}/backend/pocketbase/pb_hooks}"
+PB_MIGRATIONS_DIR="${PB_MIGRATIONS_DIR:-${ROOT_DIR}/backend/pocketbase/pb_migrations}"
 API_BASE_URL="${API_BASE_URL:-http://127.0.0.1:8090}"
 SUPERUSER_EMAIL="${SUPERUSER_EMAIL:-psc-admin@example.com}"
 SUPERUSER_PASSWORD="${SUPERUSER_PASSWORD:-change-me-please}"
@@ -38,6 +41,66 @@ fi
 if [[ ! -x "${PB_BIN}" ]]; then
   echo "[smoke] PocketBase binary not found or not executable: ${PB_BIN}" >&2
   exit 1
+fi
+
+started_local_pb=false
+pb_pid=""
+temp_pb_dir=""
+
+cleanup_local_pb() {
+  if [[ "${started_local_pb}" == "true" && -n "${pb_pid}" ]]; then
+    kill "${pb_pid}" >/dev/null 2>&1 || true
+    wait "${pb_pid}" >/dev/null 2>&1 || true
+  fi
+
+  if [[ -n "${temp_pb_dir}" && -d "${temp_pb_dir}" ]]; then
+    rm -rf "${temp_pb_dir}"
+  fi
+}
+
+trap cleanup_local_pb EXIT
+
+is_api_healthy() {
+  curl -fsS "${API_BASE_URL}/api/health" >/dev/null 2>&1
+}
+
+if ! is_api_healthy; then
+  case "${API_BASE_URL}" in
+    http://127.0.0.1:*|http://localhost:*)
+      api_host="${API_BASE_URL#http://}"
+      api_host="${api_host%%/*}"
+      if [[ -z "${PB_DIR_WAS_EXPLICIT}" ]]; then
+        temp_pb_dir="$(mktemp -d /tmp/psc-smoke-pb-data.XXXXXX)"
+        PB_DIR="${temp_pb_dir}"
+      fi
+      echo "[smoke] local API not reachable; starting PocketBase at ${api_host}"
+      "${PB_BIN}" serve \
+        --dir "${PB_DIR}" \
+        --hooksDir "${PB_HOOKS_DIR}" \
+        --migrationsDir "${PB_MIGRATIONS_DIR}" \
+        --http "${api_host}" >/tmp/psc_smoke_pocketbase.log 2>&1 &
+      pb_pid=$!
+      started_local_pb=true
+
+      ready=false
+      for _ in $(seq 1 30); do
+        if is_api_healthy; then
+          ready=true
+          break
+        fi
+        sleep 1
+      done
+
+      if [[ "${ready}" != "true" ]]; then
+        echo "[smoke] failed to start PocketBase (see /tmp/psc_smoke_pocketbase.log)" >&2
+        exit 1
+      fi
+      ;;
+    *)
+      echo "[smoke] API not reachable at ${API_BASE_URL}. Start PocketBase first or set API_BASE_URL." >&2
+      exit 1
+      ;;
+  esac
 fi
 
 echo "[smoke] upserting superuser ${SUPERUSER_EMAIL}"
