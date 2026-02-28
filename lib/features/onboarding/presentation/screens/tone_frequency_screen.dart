@@ -1,23 +1,35 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_router.dart';
 import '../../../../shared/layout/psc_page_scaffold.dart';
 import '../../../../shared/widgets/psc_blocks.dart';
+import '../providers/onboarding_providers.dart';
 
 /// Purpose: Finalize tone and frequency before first digest generation.
-class ToneFrequencyScreen extends StatefulWidget {
+class ToneFrequencyScreen extends ConsumerStatefulWidget {
   /// Purpose: Create tone and frequency screen widget.
   const ToneFrequencyScreen({super.key});
 
   /// Purpose: Create mutable state instance.
   @override
-  State<ToneFrequencyScreen> createState() => _ToneFrequencyScreenState();
+  ConsumerState<ToneFrequencyScreen> createState() =>
+      _ToneFrequencyScreenState();
 }
 
 /// Purpose: Manage toggles for notification and schedule settings.
-class _ToneFrequencyScreenState extends State<ToneFrequencyScreen> {
+class _ToneFrequencyScreenState extends ConsumerState<ToneFrequencyScreen> {
   bool _digestPreviewEnabled = true;
+
+  /// Purpose: Persist onboarding completion and route user to first digest preview.
+  Future<void> _finishOnboarding() async {
+    await ref.read(onboardingStatusProvider.notifier).markCompleted();
+    if (!mounted) {
+      return;
+    }
+    context.go(AppRoutePath.onboardingPreview);
+  }
 
   /// Purpose: Build tone and frequency configuration interface.
   @override
@@ -55,7 +67,7 @@ class _ToneFrequencyScreenState extends State<ToneFrequencyScreen> {
           ),
           const Spacer(),
           FilledButton(
-            onPressed: () => context.go(AppRoutePath.home),
+            onPressed: _finishOnboarding,
             child: const Text('Finish Setup'),
           ),
           const SizedBox(height: 8),

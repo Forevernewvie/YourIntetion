@@ -4,14 +4,22 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
 
+PB_DIR_WAS_EXPLICIT="${PB_DIR+x}"
 PB_BIN="${PB_BIN:-${ROOT_DIR}/backend/pocketbase/pocketbase}"
 PB_DIR="${PB_DIR:-${ROOT_DIR}/backend/pocketbase/pb_data}"
+PB_HOOKS_DIR="${PB_HOOKS_DIR:-${ROOT_DIR}/backend/pocketbase/pb_hooks}"
+PB_MIGRATIONS_DIR="${PB_MIGRATIONS_DIR:-${ROOT_DIR}/backend/pocketbase/pb_migrations}"
 API_BASE_URL="${API_BASE_URL:-http://127.0.0.1:8090}"
 SUPERUSER_EMAIL="${SUPERUSER_EMAIL:-psc-admin@example.com}"
 SUPERUSER_PASSWORD="${SUPERUSER_PASSWORD:-change-me-please}"
-SMOKE_USER_EMAIL="${SMOKE_USER_EMAIL:-psc-smoke-user@example.com}"
+SMOKE_USER_EMAIL="${SMOKE_USER_EMAIL:-}"
+SMOKE_USER_EMAIL_PREFIX="${SMOKE_USER_EMAIL_PREFIX:-psc-smoke-user}"
 SMOKE_USER_PASSWORD="${SMOKE_USER_PASSWORD:-Passw0rd!123}"
+LOCKOUT_TEST_EMAIL_PREFIX="${LOCKOUT_TEST_EMAIL_PREFIX:-psc-lockout-user}"
+LOCKOUT_TEST_PASSWORD="${LOCKOUT_TEST_PASSWORD:-Passw0rd!123}"
 ALLOW_GUEST_MODE="${ALLOW_GUEST_MODE:-true}"
+PSC_AUTH_LOGIN_MAX_ATTEMPTS="${PSC_AUTH_LOGIN_MAX_ATTEMPTS:-8}"
+PSC_AUTH_VERIFY_RESEND_MAX_ATTEMPTS="${PSC_AUTH_VERIFY_RESEND_MAX_ATTEMPTS:-3}"
 
 require_cmd() {
   if ! command -v "$1" >/dev/null 2>&1; then
@@ -23,9 +31,76 @@ require_cmd() {
 require_cmd curl
 require_cmd jq
 
+now_utc="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+stamp="$(date -u +"%Y%m%d%H%M%S")"
+
+if [[ -z "${SMOKE_USER_EMAIL}" ]]; then
+  SMOKE_USER_EMAIL="${SMOKE_USER_EMAIL_PREFIX}-${stamp}@example.com"
+fi
+
 if [[ ! -x "${PB_BIN}" ]]; then
   echo "[smoke] PocketBase binary not found or not executable: ${PB_BIN}" >&2
   exit 1
+fi
+
+started_local_pb=false
+pb_pid=""
+temp_pb_dir=""
+
+cleanup_local_pb() {
+  if [[ "${started_local_pb}" == "true" && -n "${pb_pid}" ]]; then
+    kill "${pb_pid}" >/dev/null 2>&1 || true
+    wait "${pb_pid}" >/dev/null 2>&1 || true
+  fi
+
+  if [[ -n "${temp_pb_dir}" && -d "${temp_pb_dir}" ]]; then
+    rm -rf "${temp_pb_dir}"
+  fi
+}
+
+trap cleanup_local_pb EXIT
+
+is_api_healthy() {
+  curl -fsS "${API_BASE_URL}/api/health" >/dev/null 2>&1
+}
+
+if ! is_api_healthy; then
+  case "${API_BASE_URL}" in
+    http://127.0.0.1:*|http://localhost:*)
+      api_host="${API_BASE_URL#http://}"
+      api_host="${api_host%%/*}"
+      if [[ -z "${PB_DIR_WAS_EXPLICIT}" ]]; then
+        temp_pb_dir="$(mktemp -d /tmp/psc-smoke-pb-data.XXXXXX)"
+        PB_DIR="${temp_pb_dir}"
+      fi
+      echo "[smoke] local API not reachable; starting PocketBase at ${api_host}"
+      "${PB_BIN}" serve \
+        --dir "${PB_DIR}" \
+        --hooksDir "${PB_HOOKS_DIR}" \
+        --migrationsDir "${PB_MIGRATIONS_DIR}" \
+        --http "${api_host}" >/tmp/psc_smoke_pocketbase.log 2>&1 &
+      pb_pid=$!
+      started_local_pb=true
+
+      ready=false
+      for _ in $(seq 1 30); do
+        if is_api_healthy; then
+          ready=true
+          break
+        fi
+        sleep 1
+      done
+
+      if [[ "${ready}" != "true" ]]; then
+        echo "[smoke] failed to start PocketBase (see /tmp/psc_smoke_pocketbase.log)" >&2
+        exit 1
+      fi
+      ;;
+    *)
+      echo "[smoke] API not reachable at ${API_BASE_URL}. Start PocketBase first or set API_BASE_URL." >&2
+      exit 1
+      ;;
+  esac
 fi
 
 echo "[smoke] upserting superuser ${SUPERUSER_EMAIL}"
@@ -49,20 +124,46 @@ admin_headers=(
   -H 'Content-Type: application/json'
 )
 
-echo "[smoke] ensuring app user account ${SMOKE_USER_EMAIL}"
-create_user_resp="$(
-  curl -sS -X POST "${API_BASE_URL}/api/collections/users/records" \
-    -H 'Content-Type: application/json' \
-    -d "{\"email\":\"${SMOKE_USER_EMAIL}\",\"password\":\"${SMOKE_USER_PASSWORD}\",\"passwordConfirm\":\"${SMOKE_USER_PASSWORD}\",\"name\":\"Smoke User\"}"
-)"
+ensure_user_account() {
+  local email="$1"
+  local password="$2"
+  local name="$3"
+  local create_user_resp
+  local user_lookup_resp
+  local user_id
 
-if ! echo "${create_user_resp}" | jq -e '.id != null' >/dev/null 2>&1; then
-  if ! echo "${create_user_resp}" | jq -e '.data.email.code == "validation_not_unique"' >/dev/null 2>&1; then
-    echo "[smoke] failed to create user account" >&2
-    echo "${create_user_resp}" >&2
+  create_user_resp="$(
+    curl -sS -X POST "${API_BASE_URL}/api/collections/users/records" \
+      -H 'Content-Type: application/json' \
+      -d "{\"email\":\"${email}\",\"password\":\"${password}\",\"passwordConfirm\":\"${password}\",\"name\":\"${name}\"}"
+  )"
+
+  if ! echo "${create_user_resp}" | jq -e '.id != null' >/dev/null 2>&1; then
+    if ! echo "${create_user_resp}" | jq -e '.data.email.code == "validation_not_unique"' >/dev/null 2>&1; then
+      echo "[smoke] failed to create user account: ${email}" >&2
+      echo "${create_user_resp}" >&2
+      exit 1
+    fi
+  fi
+
+  user_lookup_resp="$(
+    curl -fsS "${API_BASE_URL}/api/collections/users/records?filter=email=%22${email}%22&perPage=1" \
+      "${admin_headers[@]}"
+  )"
+  user_id="$(echo "${user_lookup_resp}" | jq -r '.items[0].id // empty')"
+  if [[ -z "${user_id}" ]]; then
+    echo "[smoke] failed to resolve user id after upsert: ${email}" >&2
+    echo "${user_lookup_resp}" >&2
     exit 1
   fi
-fi
+
+  curl -fsS -X PATCH "${API_BASE_URL}/api/collections/users/records/${user_id}" \
+    "${admin_headers[@]}" \
+    -d '{"verified":true}' >/dev/null
+}
+
+echo "[smoke] ensuring app user account ${SMOKE_USER_EMAIL}"
+ensure_user_account "${SMOKE_USER_EMAIL}" "${SMOKE_USER_PASSWORD}" "Smoke User"
 
 user_auth_resp="$(
   curl -fsS -X POST "${API_BASE_URL}/api/collections/users/auth-with-password" \
@@ -82,6 +183,59 @@ user_headers=(
   -H 'Content-Type: application/json'
 )
 
+echo "[smoke] validating server lockout policy"
+lockout_test_email="${LOCKOUT_TEST_EMAIL_PREFIX}-${stamp}@example.com"
+ensure_user_account "${lockout_test_email}" "${LOCKOUT_TEST_PASSWORD}" "Lockout Probe"
+
+login_block_status=""
+login_block_file=""
+for attempt in $(seq 1 $((PSC_AUTH_LOGIN_MAX_ATTEMPTS + 1))); do
+  login_block_file="/tmp/psc_login_probe_${attempt}.json"
+  login_block_status="$(
+    curl -sS -o "${login_block_file}" -w "%{http_code}" \
+      -X POST "${API_BASE_URL}/api/collections/users/auth-with-password" \
+      -H 'Content-Type: application/json' \
+      -d "{\"identity\":\"${lockout_test_email}\",\"password\":\"wrong-password-${attempt}\"}"
+  )"
+
+  if [[ "${login_block_status}" == "429" ]]; then
+    break
+  fi
+done
+
+if [[ "${login_block_status}" != "429" ]]; then
+  echo "[smoke] expected login lockout/rate-limit status 429, got ${login_block_status}" >&2
+  cat "${login_block_file}" >&2 || true
+  exit 1
+fi
+
+jq -e '.code == "AUTH_LOCKED" or .code == "RATE_LIMITED"' "${login_block_file}" >/dev/null
+
+echo "[smoke] validating verification resend throttling"
+verify_block_status=""
+verify_block_file=""
+for attempt in $(seq 1 $((PSC_AUTH_VERIFY_RESEND_MAX_ATTEMPTS + 1))); do
+  verify_block_file="/tmp/psc_verify_probe_${attempt}.json"
+  verify_block_status="$(
+    curl -sS -o "${verify_block_file}" -w "%{http_code}" \
+      -X POST "${API_BASE_URL}/api/collections/users/request-verification" \
+      -H 'Content-Type: application/json' \
+      -d "{\"email\":\"${lockout_test_email}\"}"
+  )"
+
+  if [[ "${verify_block_status}" == "429" ]]; then
+    break
+  fi
+done
+
+if [[ "${verify_block_status}" != "429" ]]; then
+  echo "[smoke] expected verification resend throttle status 429, got ${verify_block_status}" >&2
+  cat "${verify_block_file}" >&2 || true
+  exit 1
+fi
+
+jq -e '.code == "RATE_LIMITED" or .code == "AUTH_LOCKED"' "${verify_block_file}" >/dev/null
+
 seed_entry() {
   local source_name="$1"
   local source_type="$2"
@@ -97,9 +251,6 @@ seed_entry() {
     "${admin_headers[@]}" \
     -d "{\"source_name\":\"${source_name}\",\"source_type\":\"${source_type}\",\"source_domain\":\"${source_domain}\",\"topic\":\"${topic}\",\"title\":\"${title}\",\"content_snippet\":\"${snippet}\",\"canonical_url\":\"${canonical_url}\",\"published_at\":\"${published_at}\",\"trust_score\":${trust_score},\"tags\":[\"mvp\",\"smoke\"],\"blocked\":false}"
 }
-
-now_utc="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
-stamp="$(date -u +"%Y%m%d%H%M%S")"
 
 echo "[smoke] seeding source_entries"
 seed_entry "Tech Ledger" "news" "tech-ledger.example" "AI" "Deterministic digest patterns" "Teams report improved trust when digests remain deterministic." "https://tech-ledger.example/${stamp}-1" 91 "${now_utc}" >/dev/null

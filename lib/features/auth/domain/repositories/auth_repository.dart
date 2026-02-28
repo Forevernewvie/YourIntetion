@@ -12,6 +12,24 @@ abstract interface class AuthRepository {
     required String name,
   });
 
+  /// Purpose: Trigger verification email send flow for the given account email.
+  Future<void> resendVerification({required String email});
+
+  /// Purpose: Confirm verification token to mark account as verified.
+  Future<void> confirmEmailVerification({required String token});
+
+  /// Purpose: Trigger password-reset email flow for the given account email.
+  Future<void> requestPasswordReset({required String email});
+
+  /// Purpose: Confirm password reset with token and replacement password.
+  Future<void> confirmPasswordReset({
+    required String token,
+    required String password,
+  });
+
+  /// Purpose: Refresh the currently authenticated session from backend.
+  Future<AuthSession> refreshSession();
+
   /// Purpose: Restore locally persisted session if available.
   Future<AuthSession?> restoreSession();
 

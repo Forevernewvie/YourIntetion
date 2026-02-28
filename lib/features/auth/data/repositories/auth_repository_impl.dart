@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 
 import '../../../../core/error/app_failure.dart';
 import '../../../../core/logging/app_logger.dart';
+import '../../../../core/network/dio_failure_mapper.dart';
 import '../../domain/entities/auth_session.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../datasources/auth_local_data_source.dart';
@@ -18,6 +19,8 @@ final class AuthRepositoryImpl implements AuthRepository {
 
   final AuthRemoteDataSource _remote;
   final AuthLocalDataSource _local;
+  static const String _authTimeoutMessage =
+      'Network timeout while authenticating.';
 
   /// Purpose: Authenticate existing user and persist resulting session.
   @override
@@ -75,6 +78,77 @@ final class AuthRepositoryImpl implements AuthRepository {
     }
   }
 
+  /// Purpose: Trigger verification email resend with abuse-safe backend controls.
+  @override
+  Future<void> resendVerification({required String email}) async {
+    try {
+      await _remote.requestEmailVerification(email: email);
+    } on DioException catch (error) {
+      throw _mapDioFailure(
+        error,
+        fallbackMessage: 'Unable to send verification email. Please retry.',
+      );
+    }
+  }
+
+  /// Purpose: Confirm email verification token and update account verification state.
+  @override
+  Future<void> confirmEmailVerification({required String token}) async {
+    try {
+      await _remote.confirmEmailVerification(token: token);
+    } on DioException catch (error) {
+      throw _mapDioFailure(
+        error,
+        fallbackMessage: 'Verification link is invalid or expired.',
+      );
+    }
+  }
+
+  /// Purpose: Trigger password reset mail delivery with anti-enumeration messaging.
+  @override
+  Future<void> requestPasswordReset({required String email}) async {
+    try {
+      await _remote.requestPasswordReset(email: email);
+    } on DioException catch (error) {
+      throw _mapDioFailure(
+        error,
+        fallbackMessage:
+            'If the account exists, password reset instructions were sent.',
+      );
+    }
+  }
+
+  /// Purpose: Confirm password reset and invalidate compromised credentials.
+  @override
+  Future<void> confirmPasswordReset({
+    required String token,
+    required String password,
+  }) async {
+    try {
+      await _remote.confirmPasswordReset(token: token, password: password);
+    } on DioException catch (error) {
+      throw _mapDioFailure(
+        error,
+        fallbackMessage: 'Reset link is invalid or expired.',
+      );
+    }
+  }
+
+  /// Purpose: Refresh authenticated session and persist latest verified/account flags.
+  @override
+  Future<AuthSession> refreshSession() async {
+    try {
+      final session = await _remote.refreshSession();
+      await _local.saveSession(session);
+      return session;
+    } on DioException catch (error) {
+      throw _mapDioFailure(
+        error,
+        fallbackMessage: 'Unable to refresh session.',
+      );
+    }
+  }
+
   /// Purpose: Restore persisted local session without network dependency.
   @override
   Future<AuthSession?> restoreSession() {
@@ -92,32 +166,14 @@ final class AuthRepositoryImpl implements AuthRepository {
     DioException error, {
     required String fallbackMessage,
   }) {
-    final statusCode = error.response?.statusCode ?? 0;
-    if (statusCode == 401 || statusCode == 403) {
-      return const AppFailure(
-        code: AppErrorCode.netUnauthorized,
-        message: 'Authentication failed.',
-      );
-    }
-    if (statusCode >= 400 && statusCode < 500) {
-      return AppFailure(
-        code: AppErrorCode.apiBadResponse,
-        message: fallbackMessage,
-        cause: error,
-      );
-    }
-    if (error.type == DioExceptionType.connectionTimeout ||
-        error.type == DioExceptionType.receiveTimeout ||
-        error.type == DioExceptionType.sendTimeout) {
-      return const AppFailure(
-        code: AppErrorCode.netTimeout,
-        message: 'Network timeout while authenticating.',
-      );
-    }
-    return AppFailure(
-      code: AppErrorCode.unknown,
-      message: fallbackMessage,
-      cause: error,
+    return DioFailureMapper.map(
+      error,
+      messages: DioFailureMessages(
+        fallbackMessage: fallbackMessage,
+        timeoutMessage: _authTimeoutMessage,
+        unauthorizedMessage: 'Authentication failed.',
+        tooManyRequestsMessage: 'Too many requests. Please wait and try again.',
+      ),
     );
   }
 }

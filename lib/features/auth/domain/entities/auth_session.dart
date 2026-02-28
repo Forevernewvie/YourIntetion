@@ -5,11 +5,13 @@ class AuthSession {
     required this.token,
     required this.userId,
     required this.email,
+    required this.isVerified,
     this.name,
   });
 
   final String token;
   final String userId;
   final String email;
+  final bool isVerified;
   final String? name;
 }

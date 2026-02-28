@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/error/app_failure.dart';
 import '../../../../core/logging/app_logger.dart';
+import '../../../../core/network/dio_failure_mapper.dart';
 import '../../domain/entities/feedback_event.dart';
 import '../../domain/entities/rule_profile.dart';
 import '../models/digest_response_dto.dart';
@@ -324,38 +325,14 @@ final class DigestRemoteDataSourceImpl implements DigestRemoteDataSource {
     DioException error, {
     required String fallbackMessage,
   }) {
-    final statusCode = error.response?.statusCode ?? 0;
-
-    if (statusCode == 401 || statusCode == 403) {
-      return const AppFailure(
-        code: AppErrorCode.netUnauthorized,
-        message: 'Authentication required to access this resource.',
-      );
-    }
-    if (statusCode >= 400 && statusCode < 500) {
-      return AppFailure(
-        code: AppErrorCode.apiBadResponse,
-        message: error.response?.data is Map<String, dynamic>
-            ? (((error.response?.data as Map<String, dynamic>)['message']
-                      as String?) ??
-                  fallbackMessage)
-            : fallbackMessage,
-        cause: error,
-      );
-    }
-    if (error.type == DioExceptionType.connectionTimeout ||
-        error.type == DioExceptionType.sendTimeout ||
-        error.type == DioExceptionType.receiveTimeout) {
-      return const AppFailure(
-        code: AppErrorCode.netTimeout,
-        message: 'Network timeout while requesting backend API.',
-      );
-    }
-
-    return AppFailure(
-      code: AppErrorCode.unknown,
-      message: fallbackMessage,
-      cause: error,
+    return DioFailureMapper.map(
+      error,
+      messages: DioFailureMessages(
+        fallbackMessage: fallbackMessage,
+        timeoutMessage: 'Network timeout while requesting backend API.',
+        unauthorizedMessage: 'Authentication required to access this resource.',
+        tooManyRequestsMessage: 'Too many requests. Please wait and try again.',
+      ),
     );
   }
 }

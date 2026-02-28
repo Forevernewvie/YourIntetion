@@ -198,3 +198,79 @@ class PscStatusBanner extends StatelessWidget {
     );
   }
 }
+
+/// Purpose: Render digest preview card with explainability and source metadata.
+class PscDigestCard extends StatelessWidget {
+  /// Purpose: Construct digest card with required deterministic digest fields.
+  const PscDigestCard({
+    required this.topic,
+    required this.whyReason,
+    required this.summary,
+    required this.freshness,
+    required this.sourceMix,
+    super.key,
+  });
+
+  final String topic;
+  final String whyReason;
+  final String summary;
+  final String freshness;
+  final String sourceMix;
+
+  /// Purpose: Build digest card surface matching app digest feed structure.
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: theme.dividerColor.withValues(alpha: 0.5)),
+        color: theme.cardTheme.color,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  topic,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              Text(
+                freshness,
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: theme.textTheme.bodySmall?.color?.withValues(
+                    alpha: 0.7,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            whyReason,
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: theme.colorScheme.primary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(summary, style: theme.textTheme.bodySmall),
+          const SizedBox(height: 8),
+          Text(
+            sourceMix,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.7),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

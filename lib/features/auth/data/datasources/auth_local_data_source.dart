@@ -22,6 +22,7 @@ final class AuthLocalDataSourceImpl implements AuthLocalDataSource {
   static const _tokenKey = 'auth.token';
   static const _userIdKey = 'auth.userId';
   static const _emailKey = 'auth.email';
+  static const _verifiedKey = 'auth.verified';
   static const _nameKey = 'auth.name';
 
   /// Purpose: Persist authenticated session values.
@@ -31,6 +32,7 @@ final class AuthLocalDataSourceImpl implements AuthLocalDataSource {
     await prefs.setString(_tokenKey, session.token);
     await prefs.setString(_userIdKey, session.userId);
     await prefs.setString(_emailKey, session.email);
+    await prefs.setBool(_verifiedKey, session.isVerified);
 
     if (session.name == null || session.name!.isEmpty) {
       await prefs.remove(_nameKey);
@@ -47,6 +49,7 @@ final class AuthLocalDataSourceImpl implements AuthLocalDataSource {
     final token = prefs.getString(_tokenKey);
     final userId = prefs.getString(_userIdKey);
     final email = prefs.getString(_emailKey);
+    final isVerified = prefs.getBool(_verifiedKey) ?? false;
 
     if (token == null || token.isEmpty) {
       return null;
@@ -62,6 +65,7 @@ final class AuthLocalDataSourceImpl implements AuthLocalDataSource {
       token: token,
       userId: userId,
       email: email,
+      isVerified: isVerified,
       name: prefs.getString(_nameKey),
     );
   }
@@ -73,6 +77,7 @@ final class AuthLocalDataSourceImpl implements AuthLocalDataSource {
     await prefs.remove(_tokenKey);
     await prefs.remove(_userIdKey);
     await prefs.remove(_emailKey);
+    await prefs.remove(_verifiedKey);
     await prefs.remove(_nameKey);
   }
 }

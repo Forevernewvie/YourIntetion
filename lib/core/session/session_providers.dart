@@ -8,3 +8,6 @@ final currentUserIdProvider = StateProvider<String?>((ref) => null);
 
 /// Purpose: Hold current authenticated user email for UI/account context.
 final currentUserEmailProvider = StateProvider<String?>((ref) => null);
+
+/// Purpose: Hold current email verification status for auth gating.
+final currentUserVerifiedProvider = StateProvider<bool>((ref) => false);

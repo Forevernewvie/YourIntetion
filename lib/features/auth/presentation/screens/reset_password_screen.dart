@@ -5,99 +5,111 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/app_router.dart';
 import '../../../../core/error/app_failure.dart';
 import '../../../../shared/layout/psc_page_scaffold.dart';
+import '../../../../shared/widgets/psc_blocks.dart';
 import '../providers/auth_providers.dart';
 
-/// Purpose: Render account registration form for first-time users.
-class SignUpScreen extends ConsumerStatefulWidget {
-  /// Purpose: Create sign-up screen widget.
-  const SignUpScreen({super.key});
+/// Purpose: Validate reset token and set a new password for account recovery.
+class ResetPasswordScreen extends ConsumerStatefulWidget {
+  /// Purpose: Create reset password screen with optional deep-link token.
+  const ResetPasswordScreen({required this.initialToken, super.key});
 
-  /// Purpose: Create mutable sign-up form state.
+  final String initialToken;
+
+  /// Purpose: Create mutable reset password state.
   @override
-  ConsumerState<SignUpScreen> createState() => _SignUpScreenState();
+  ConsumerState<ResetPasswordScreen> createState() =>
+      _ResetPasswordScreenState();
 }
 
-/// Purpose: Manage sign-up form state and account creation actions.
-class _SignUpScreenState extends ConsumerState<SignUpScreen> {
+/// Purpose: Manage reset token/password validation and submission state.
+class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _emailController = TextEditingController();
+  final _tokenController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmController = TextEditingController();
   bool _obscurePassword = true;
+  bool _isSubmitting = false;
+  String? _statusMessage;
+  bool _isErrorStatus = false;
 
-  /// Purpose: Release form controllers when widget state is disposed.
+  /// Purpose: Seed token input from route parameter for deep-link compatibility.
+  @override
+  void initState() {
+    super.initState();
+    _tokenController.text = widget.initialToken;
+  }
+
+  /// Purpose: Dispose form controllers when screen is removed.
   @override
   void dispose() {
-    _nameController.dispose();
-    _emailController.dispose();
+    _tokenController.dispose();
     _passwordController.dispose();
     _confirmController.dispose();
     super.dispose();
   }
 
-  /// Purpose: Validate form and trigger sign-up flow.
+  /// Purpose: Validate reset inputs and submit password reset confirmation.
   Future<void> _submit() async {
     final form = _formKey.currentState;
     if (form == null || !form.validate()) {
       return;
     }
 
-    await ref
-        .read(authControllerProvider.notifier)
-        .signUp(
-          email: _emailController.text.trim(),
-          password: _passwordController.text,
-          name: _nameController.text.trim(),
-        );
+    setState(() {
+      _isSubmitting = true;
+      _statusMessage = null;
+    });
+
+    try {
+      await ref
+          .read(authControllerProvider.notifier)
+          .confirmPasswordReset(
+            token: _tokenController.text.trim(),
+            password: _passwordController.text,
+          );
+      setState(() {
+        _isSubmitting = false;
+        _isErrorStatus = false;
+        _statusMessage =
+            'Password reset complete. Please sign in with your new password.';
+      });
+    } catch (error) {
+      final failureMessage = error is AppFailure
+          ? error.message
+          : 'Unable to reset password. Please retry.';
+      setState(() {
+        _isSubmitting = false;
+        _isErrorStatus = true;
+        _statusMessage = failureMessage;
+      });
+    }
   }
 
-  /// Purpose: Build sign-up form and action controls.
+  /// Purpose: Build reset-password form and deterministic success/failure guidance.
   @override
   Widget build(BuildContext context) {
-    final authState = ref.watch(authControllerProvider);
-    final isLoading = authState.isLoading;
     final theme = Theme.of(context);
-    final errorMessage = authState.hasError
-        ? _errorMessage(authState.error)
-        : null;
 
     return PscPageScaffold(
-      title: 'Create Account',
+      title: 'Reset Password',
       body: Form(
         key: _formKey,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'Create your account. Email verification is required before digest access.',
+              'Paste your reset token and choose a new password.',
               style: theme.textTheme.bodyMedium,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
             TextFormField(
-              controller: _nameController,
-              decoration: const InputDecoration(labelText: 'Name'),
+              controller: _tokenController,
+              autocorrect: false,
+              decoration: const InputDecoration(labelText: 'Reset Token'),
               validator: (value) {
                 final input = (value ?? '').trim();
                 if (input.isEmpty) {
-                  return 'Name is required.';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _emailController,
-              keyboardType: TextInputType.emailAddress,
-              autocorrect: false,
-              decoration: const InputDecoration(
-                labelText: 'Email',
-                hintText: 'you@example.com',
-              ),
-              validator: (value) {
-                final input = (value ?? '').trim();
-                if (input.isEmpty || !input.contains('@')) {
-                  return 'Enter a valid email address.';
+                  return 'Reset token is required.';
                 }
                 return null;
               },
@@ -108,7 +120,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
               obscureText: _obscurePassword,
               autocorrect: false,
               decoration: InputDecoration(
-                labelText: 'Password',
+                labelText: 'New Password',
                 suffixIcon: IconButton(
                   onPressed: () => setState(() {
                     _obscurePassword = !_obscurePassword;
@@ -141,29 +153,29 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                 return null;
               },
             ),
-            if (errorMessage != null) ...[
+            if (_statusMessage != null) ...[
               const SizedBox(height: 12),
-              Text(
-                errorMessage,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.error,
-                ),
+              PscStatusBanner(
+                message: _statusMessage!,
+                color: _isErrorStatus
+                    ? theme.colorScheme.error
+                    : theme.colorScheme.primary,
               ),
             ],
             const Spacer(),
             FilledButton(
-              onPressed: isLoading ? null : _submit,
-              child: isLoading
+              onPressed: _isSubmitting ? null : _submit,
+              child: _isSubmitting
                   ? const SizedBox(
                       width: 20,
                       height: 20,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Text('Create Account'),
+                  : const Text('Reset Password'),
             ),
             const SizedBox(height: 8),
             OutlinedButton(
-              onPressed: isLoading
+              onPressed: _isSubmitting
                   ? null
                   : () => context.go(AppRoutePath.login),
               child: const Text('Back to Sign In'),
@@ -172,13 +184,5 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
         ),
       ),
     );
-  }
-
-  /// Purpose: Convert auth state error to concise and user-friendly text.
-  String _errorMessage(Object? error) {
-    if (error is AppFailure) {
-      return error.message;
-    }
-    return 'Account creation failed. Please retry.';
   }
 }

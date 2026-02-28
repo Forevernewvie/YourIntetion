@@ -38,6 +38,18 @@ See `backend/pocketbase/.env.example`:
 - `PSC_SAVED_DIGESTS_DEFAULT_LIMIT=20`
 - `PSC_SAVED_DIGESTS_MAX_LIMIT=50`
 - `PSC_FRESHNESS_MAX_MINUTES=1440`
+- `PSC_AUTH_POLICY_ENABLED=true`
+- `PSC_AUTH_LOGIN_WINDOW_SECONDS=300`
+- `PSC_AUTH_LOGIN_MAX_ATTEMPTS=8`
+- `PSC_AUTH_LOGIN_LOCKOUT_SECONDS=900`
+- `PSC_AUTH_VERIFY_RESEND_WINDOW_SECONDS=600`
+- `PSC_AUTH_VERIFY_RESEND_MAX_ATTEMPTS=3`
+- `PSC_AUTH_PASSWORD_RESET_WINDOW_SECONDS=600`
+- `PSC_AUTH_PASSWORD_RESET_MAX_ATTEMPTS=3`
+- `PSC_AUTH_VERIFY_CONFIRM_WINDOW_SECONDS=600`
+- `PSC_AUTH_VERIFY_CONFIRM_MAX_ATTEMPTS=10`
+- `PSC_AUTH_RESET_CONFIRM_WINDOW_SECONDS=600`
+- `PSC_AUTH_RESET_CONFIRM_MAX_ATTEMPTS=10`
 
 ## Run locally
 
@@ -78,12 +90,35 @@ Use PocketBase built-in `users` auth endpoints:
 
 - Sign up: `POST /api/collections/users/records`
 - Login: `POST /api/collections/users/auth-with-password`
+- Refresh session: `POST /api/collections/users/auth-refresh`
+- Request email verification: `POST /api/collections/users/request-verification`
+- Confirm email verification: `POST /api/collections/users/confirm-verification`
+- Request password reset: `POST /api/collections/users/request-password-reset`
+- Confirm password reset: `POST /api/collections/users/confirm-password-reset`
 
 Pass access token on all `/v1/*` requests:
 
 ```http
 Authorization: Bearer <users_jwt_token>
 ```
+
+## Server-enforced Auth Policy
+
+The backend enforces auth abuse controls in `pb_hooks/main.pb.js` using PocketBase auth hooks (`users` collection only):
+
+- Login (`auth-with-password`):
+  - Sliding window rate-limit by identity hash and IP hash.
+  - Identity lockout on threshold breach (`AUTH_LOCKED`, `429`).
+- Verification resend (`request-verification`): IP rate-limit (`RATE_LIMITED`, `429`).
+- Password reset request (`request-password-reset`): IP rate-limit (`RATE_LIMITED`, `429`).
+- Verification confirm (`confirm-verification`): token/IP attempt throttling.
+- Password reset confirm (`confirm-password-reset`): token/IP attempt throttling.
+
+Security notes:
+
+- Policy data is persisted in `auth_rate_limits`, `auth_lockouts`, `auth_audit_logs`.
+- Logs and audit records store only hashed identity/IP/token derivatives.
+- Error payloads are structured as `{ code, message, details, traceId }`.
 
 ## Notes
 
