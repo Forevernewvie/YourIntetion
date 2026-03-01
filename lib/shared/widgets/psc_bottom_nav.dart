@@ -46,6 +46,8 @@ class PscBottomNav extends StatelessWidget {
                   child: Text(
                     _labels[index],
                     textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.labelSmall?.copyWith(
                       fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                       color: selected

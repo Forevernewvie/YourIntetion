@@ -36,16 +36,24 @@ class DigestCardTile extends StatelessWidget {
                     Expanded(
                       child: Text(
                         item.topic,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                         style: theme.textTheme.labelMedium?.copyWith(
                           fontWeight: FontWeight.w700,
                         ),
                       ),
                     ),
-                    Text(
-                      '${item.freshnessMinutes}m ago',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: theme.textTheme.labelSmall?.color?.withValues(
-                          alpha: 0.8,
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        '${item.freshnessMinutes}m ago',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.end,
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: theme.textTheme.labelSmall?.color?.withValues(
+                            alpha: 0.8,
+                          ),
                         ),
                       ),
                     ),
@@ -54,6 +62,8 @@ class DigestCardTile extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   'Why: ${item.whyReason}',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.primary,
                     fontWeight: FontWeight.w600,

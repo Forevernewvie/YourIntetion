@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_router.dart';
 import '../../../../core/error/app_failure.dart';
+import '../../../../shared/layout/psc_adaptive_scroll_body.dart';
 import '../../../../shared/layout/psc_page_scaffold.dart';
 import '../../../../shared/widgets/psc_blocks.dart';
 import '../providers/auth_providers.dart';
@@ -75,60 +76,63 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
 
     return PscPageScaffold(
       title: 'Forgot Password',
-      body: Form(
-        key: _formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'Enter your email to receive a password reset link.',
-              style: theme.textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 14),
-            TextFormField(
-              controller: _emailController,
-              keyboardType: TextInputType.emailAddress,
-              autocorrect: false,
-              decoration: const InputDecoration(
-                labelText: 'Email',
-                hintText: 'you@example.com',
+      body: PscAdaptiveScrollBody(
+        extraBottomPadding: 8,
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Enter your email to receive a password reset link.',
+                style: theme.textTheme.bodyMedium,
               ),
-              validator: (value) {
-                final input = (value ?? '').trim();
-                if (input.isEmpty || !input.contains('@')) {
-                  return 'Enter a valid email address.';
-                }
-                return null;
-              },
-            ),
-            if (_statusMessage != null) ...[
-              const SizedBox(height: 12),
-              PscStatusBanner(
-                message: _statusMessage!,
-                color: _isErrorStatus
-                    ? theme.colorScheme.error
-                    : theme.colorScheme.primary,
+              const SizedBox(height: 14),
+              TextFormField(
+                controller: _emailController,
+                keyboardType: TextInputType.emailAddress,
+                autocorrect: false,
+                decoration: const InputDecoration(
+                  labelText: 'Email',
+                  hintText: 'you@example.com',
+                ),
+                validator: (value) {
+                  final input = (value ?? '').trim();
+                  if (input.isEmpty || !input.contains('@')) {
+                    return 'Enter a valid email address.';
+                  }
+                  return null;
+                },
+              ),
+              if (_statusMessage != null) ...[
+                const SizedBox(height: 12),
+                PscStatusBanner(
+                  message: _statusMessage!,
+                  color: _isErrorStatus
+                      ? theme.colorScheme.error
+                      : theme.colorScheme.primary,
+                ),
+              ],
+              const Spacer(),
+              FilledButton(
+                onPressed: _isSubmitting ? null : _submit,
+                child: _isSubmitting
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Send Reset Link'),
+              ),
+              const SizedBox(height: 8),
+              OutlinedButton(
+                onPressed: _isSubmitting
+                    ? null
+                    : () => context.go(AppRoutePath.login),
+                child: const Text('Back to Sign In'),
               ),
             ],
-            const Spacer(),
-            FilledButton(
-              onPressed: _isSubmitting ? null : _submit,
-              child: _isSubmitting
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('Send Reset Link'),
-            ),
-            const SizedBox(height: 8),
-            OutlinedButton(
-              onPressed: _isSubmitting
-                  ? null
-                  : () => context.go(AppRoutePath.login),
-              child: const Text('Back to Sign In'),
-            ),
-          ],
+          ),
         ),
       ),
     );

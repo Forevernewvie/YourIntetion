@@ -26,31 +26,43 @@ class HomeDigestFeedScreen extends ConsumerWidget {
       body: digestAsync.when(
         data: (digest) {
           final hasItems = digest.items.isNotEmpty;
+          if (!hasItems) {
+            return ListView(
+              children: [
+                const PscSearchField(hintText: 'Search topics or sources'),
+                const SizedBox(height: 10),
+                _EmptyDigestState(
+                  onRetry: () =>
+                      ref.read(digestRefreshTickProvider.notifier).state++,
+                ),
+                const SizedBox(height: 8),
+                OutlinedButton(
+                  onPressed: () =>
+                      ref.read(digestRefreshTickProvider.notifier).state++,
+                  child: const Text('Retry Refresh'),
+                ),
+              ],
+            );
+          }
+
           return Column(
             children: [
               const PscSearchField(hintText: 'Search topics or sources'),
               const SizedBox(height: 10),
               Expanded(
-                child: hasItems
-                    ? ListView.separated(
-                        itemCount: digest.items.length,
-                        separatorBuilder: (context, index) =>
-                            const SizedBox(height: 8),
-                        itemBuilder: (context, index) {
-                          final item = digest.items[index];
-                          return DigestCardTile(
-                            item: item,
-                            onTap: () => context.go(
-                              AppRoutePath.digestDetailById(digest.id),
-                            ),
-                          );
-                        },
-                      )
-                    : _EmptyDigestState(
-                        onRetry: () => ref
-                            .read(digestRefreshTickProvider.notifier)
-                            .state++,
-                      ),
+                child: ListView.separated(
+                  itemCount: digest.items.length,
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(height: 8),
+                  itemBuilder: (context, index) {
+                    final item = digest.items[index];
+                    return DigestCardTile(
+                      item: item,
+                      onTap: () =>
+                          context.go(AppRoutePath.digestDetailById(digest.id)),
+                    );
+                  },
+                ),
               ),
               const SizedBox(height: 8),
               OutlinedButton(
@@ -62,7 +74,7 @@ class HomeDigestFeedScreen extends ConsumerWidget {
           );
         },
         loading: () => const _LoadingOnlyState(),
-        error: (error, stackTrace) => Column(
+        error: (error, stackTrace) => ListView(
           children: [
             const SizedBox(height: 12),
             PscStatusBanner(
@@ -177,7 +189,7 @@ class _LoadingOnlyState extends StatelessWidget {
   /// Purpose: Build loading state with search and skeleton.
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return ListView(
       children: const [
         PscSearchField(hintText: 'Search topics or sources'),
         SizedBox(height: 10),

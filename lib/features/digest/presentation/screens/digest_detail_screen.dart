@@ -24,6 +24,14 @@ class DigestDetailScreen extends ConsumerWidget {
       title: 'Digest Detail',
       body: digestAsync.when(
         data: (digest) {
+          if (digest.items.isEmpty) {
+            return Center(
+              child: PscStatusBanner(
+                message: 'No digest detail is available yet.',
+                color: Theme.of(context).colorScheme.error,
+              ),
+            );
+          }
           final first = digest.items.first;
           return ListView(
             children: [
@@ -134,10 +142,15 @@ class _CitationChip extends StatelessWidget {
         children: [
           Icon(Icons.link, size: 12, color: theme.textTheme.labelSmall?.color),
           const SizedBox(width: 6),
-          Text(
-            label,
-            style: theme.textTheme.labelSmall?.copyWith(
-              fontWeight: FontWeight.w700,
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 160),
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.labelSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ],

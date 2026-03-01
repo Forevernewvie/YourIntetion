@@ -20,6 +20,7 @@ class PscPageScaffold extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       body: SafeArea(
         child: Container(
           color: theme.scaffoldBackgroundColor,
@@ -27,8 +28,11 @@ class PscPageScaffold extends StatelessWidget {
           child: Column(
             children: [
               Container(
-                height: 56,
-                padding: const EdgeInsets.symmetric(horizontal: 14),
+                constraints: const BoxConstraints(minHeight: 56),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
                 decoration: BoxDecoration(
                   color: theme.cardTheme.color,
                   borderRadius: BorderRadius.circular(14),
@@ -41,6 +45,8 @@ class PscPageScaffold extends StatelessWidget {
                     Expanded(
                       child: Text(
                         title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w700,
                         ),
