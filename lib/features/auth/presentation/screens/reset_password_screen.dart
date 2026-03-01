@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_router.dart';
 import '../../../../core/error/app_failure.dart';
+import '../../../../shared/layout/psc_adaptive_scroll_body.dart';
 import '../../../../shared/layout/psc_page_scaffold.dart';
 import '../../../../shared/widgets/psc_blocks.dart';
 import '../providers/auth_providers.dart';
@@ -92,95 +93,100 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
 
     return PscPageScaffold(
       title: 'Reset Password',
-      body: Form(
-        key: _formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'Paste your reset token and choose a new password.',
-              style: theme.textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 14),
-            TextFormField(
-              controller: _tokenController,
-              autocorrect: false,
-              decoration: const InputDecoration(labelText: 'Reset Token'),
-              validator: (value) {
-                final input = (value ?? '').trim();
-                if (input.isEmpty) {
-                  return 'Reset token is required.';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _passwordController,
-              obscureText: _obscurePassword,
-              autocorrect: false,
-              decoration: InputDecoration(
-                labelText: 'New Password',
-                suffixIcon: IconButton(
-                  onPressed: () => setState(() {
-                    _obscurePassword = !_obscurePassword;
-                  }),
-                  icon: Icon(
-                    _obscurePassword
-                        ? Icons.visibility_outlined
-                        : Icons.visibility_off_outlined,
+      body: PscAdaptiveScrollBody(
+        extraBottomPadding: 8,
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Paste your reset token and choose a new password.',
+                style: theme.textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 14),
+              TextFormField(
+                controller: _tokenController,
+                autocorrect: false,
+                decoration: const InputDecoration(labelText: 'Reset Token'),
+                validator: (value) {
+                  final input = (value ?? '').trim();
+                  if (input.isEmpty) {
+                    return 'Reset token is required.';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _passwordController,
+                obscureText: _obscurePassword,
+                autocorrect: false,
+                decoration: InputDecoration(
+                  labelText: 'New Password',
+                  suffixIcon: IconButton(
+                    onPressed: () => setState(() {
+                      _obscurePassword = !_obscurePassword;
+                    }),
+                    icon: Icon(
+                      _obscurePassword
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined,
+                    ),
                   ),
                 ),
+                validator: (value) {
+                  final input = value ?? '';
+                  if (input.length < 8) {
+                    return 'Password must be at least 8 characters.';
+                  }
+                  return null;
+                },
               ),
-              validator: (value) {
-                final input = value ?? '';
-                if (input.length < 8) {
-                  return 'Password must be at least 8 characters.';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _confirmController,
-              obscureText: _obscurePassword,
-              autocorrect: false,
-              decoration: const InputDecoration(labelText: 'Confirm Password'),
-              validator: (value) {
-                if ((value ?? '') != _passwordController.text) {
-                  return 'Password confirmation does not match.';
-                }
-                return null;
-              },
-            ),
-            if (_statusMessage != null) ...[
               const SizedBox(height: 12),
-              PscStatusBanner(
-                message: _statusMessage!,
-                color: _isErrorStatus
-                    ? theme.colorScheme.error
-                    : theme.colorScheme.primary,
+              TextFormField(
+                controller: _confirmController,
+                obscureText: _obscurePassword,
+                autocorrect: false,
+                decoration: const InputDecoration(
+                  labelText: 'Confirm Password',
+                ),
+                validator: (value) {
+                  if ((value ?? '') != _passwordController.text) {
+                    return 'Password confirmation does not match.';
+                  }
+                  return null;
+                },
+              ),
+              if (_statusMessage != null) ...[
+                const SizedBox(height: 12),
+                PscStatusBanner(
+                  message: _statusMessage!,
+                  color: _isErrorStatus
+                      ? theme.colorScheme.error
+                      : theme.colorScheme.primary,
+                ),
+              ],
+              const Spacer(),
+              FilledButton(
+                onPressed: _isSubmitting ? null : _submit,
+                child: _isSubmitting
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Reset Password'),
+              ),
+              const SizedBox(height: 8),
+              OutlinedButton(
+                onPressed: _isSubmitting
+                    ? null
+                    : () => context.go(AppRoutePath.login),
+                child: const Text('Back to Sign In'),
               ),
             ],
-            const Spacer(),
-            FilledButton(
-              onPressed: _isSubmitting ? null : _submit,
-              child: _isSubmitting
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('Reset Password'),
-            ),
-            const SizedBox(height: 8),
-            OutlinedButton(
-              onPressed: _isSubmitting
-                  ? null
-                  : () => context.go(AppRoutePath.login),
-              child: const Text('Back to Sign In'),
-            ),
-          ],
+          ),
         ),
       ),
     );

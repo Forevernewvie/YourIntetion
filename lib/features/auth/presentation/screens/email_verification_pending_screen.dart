@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_router.dart';
 import '../../../../core/error/app_failure.dart';
+import '../../../../shared/layout/psc_adaptive_scroll_body.dart';
 import '../../../../shared/layout/psc_page_scaffold.dart';
 import '../../../../shared/widgets/psc_blocks.dart';
 import '../providers/auth_providers.dart';
@@ -135,50 +136,53 @@ class _EmailVerificationPendingScreenState
 
     return PscPageScaffold(
       title: 'Verify Your Email',
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            'We sent a verification link to:',
-            style: theme.textTheme.bodyMedium,
-          ),
-          const SizedBox(height: 6),
-          Text(
-            email,
-            style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w700,
+      body: PscAdaptiveScrollBody(
+        extraBottomPadding: 8,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'We sent a verification link to:',
+              style: theme.textTheme.bodyMedium,
             ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Verification is required before you can view personalized digests.',
-            style: theme.textTheme.bodySmall,
-          ),
-          const SizedBox(height: 12),
-          if (_statusMessage != null) ...[
-            PscStatusBanner(
-              message: _statusMessage!,
-              color: _isErrorStatus
-                  ? theme.colorScheme.error
-                  : theme.colorScheme.primary,
+            const SizedBox(height: 6),
+            Text(
+              email,
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
             ),
             const SizedBox(height: 12),
+            Text(
+              'Verification is required before you can view personalized digests.',
+              style: theme.textTheme.bodySmall,
+            ),
+            const SizedBox(height: 12),
+            if (_statusMessage != null) ...[
+              PscStatusBanner(
+                message: _statusMessage!,
+                color: _isErrorStatus
+                    ? theme.colorScheme.error
+                    : theme.colorScheme.primary,
+              ),
+              const SizedBox(height: 12),
+            ],
+            FilledButton(
+              onPressed: _iHaveVerified,
+              child: const Text("I've Verified My Email"),
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton(
+              onPressed: _remainingSeconds == 0 ? _resendVerification : null,
+              child: Text(resendLabel),
+            ),
+            const Spacer(),
+            OutlinedButton(
+              onPressed: () => context.go(AppRoutePath.login),
+              child: const Text('Back to Sign In'),
+            ),
           ],
-          FilledButton(
-            onPressed: _iHaveVerified,
-            child: const Text("I've Verified My Email"),
-          ),
-          const SizedBox(height: 8),
-          OutlinedButton(
-            onPressed: _remainingSeconds == 0 ? _resendVerification : null,
-            child: Text(resendLabel),
-          ),
-          const Spacer(),
-          OutlinedButton(
-            onPressed: () => context.go(AppRoutePath.login),
-            child: const Text('Back to Sign In'),
-          ),
-        ],
+        ),
       ),
     );
   }

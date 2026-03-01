@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_router.dart';
 import '../../../../core/error/app_failure.dart';
+import '../../../../shared/layout/psc_adaptive_scroll_body.dart';
 import '../../../../shared/layout/psc_page_scaffold.dart';
 import '../../../../shared/widgets/psc_blocks.dart';
 import '../providers/auth_providers.dart';
@@ -75,46 +76,53 @@ class _VerificationResultScreenState
 
     return PscPageScaffold(
       title: 'Email Verification',
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (_isLoading)
-            const Expanded(child: Center(child: CircularProgressIndicator()))
-          else ...[
-            const SizedBox(height: 12),
-            Icon(
-              _isSuccess ? Icons.verified_user_outlined : Icons.error_outline,
-              size: 44,
-              color: _isSuccess
-                  ? theme.colorScheme.primary
-                  : theme.colorScheme.error,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              _isSuccess ? 'Verification Complete' : 'Verification Failed',
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w700,
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : PscAdaptiveScrollBody(
+              extraBottomPadding: 8,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: 12),
+                  Icon(
+                    _isSuccess
+                        ? Icons.verified_user_outlined
+                        : Icons.error_outline,
+                    size: 44,
+                    color: _isSuccess
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.error,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    _isSuccess
+                        ? 'Verification Complete'
+                        : 'Verification Failed',
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  PscStatusBanner(
+                    message: _message,
+                    color: _isSuccess
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.error,
+                  ),
+                  const Spacer(),
+                  FilledButton(
+                    onPressed: () => context.go(
+                      _isSuccess
+                          ? AppRoutePath.welcome
+                          : AppRoutePath.verifyPending,
+                    ),
+                    child: Text(
+                      _isSuccess ? 'Continue Setup' : 'Back to Verification',
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 10),
-            PscStatusBanner(
-              message: _message,
-              color: _isSuccess
-                  ? theme.colorScheme.primary
-                  : theme.colorScheme.error,
-            ),
-            const Spacer(),
-            FilledButton(
-              onPressed: () => context.go(
-                _isSuccess ? AppRoutePath.welcome : AppRoutePath.verifyPending,
-              ),
-              child: Text(
-                _isSuccess ? 'Continue Setup' : 'Back to Verification',
-              ),
-            ),
-          ],
-        ],
-      ),
     );
   }
 }

@@ -78,19 +78,28 @@ class PscRuleSectionCard extends StatelessWidget {
               const SizedBox(height: 10),
               Row(
                 children: [
-                  Text(
-                    status,
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: statusTextColor,
-                      fontWeight: FontWeight.w700,
+                  Expanded(
+                    child: Text(
+                      status,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: statusTextColor,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
-                  const Spacer(),
-                  Text(
-                    hint,
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: theme.colorScheme.primary,
-                      fontWeight: FontWeight.w600,
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: Text(
+                      hint,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.end,
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: theme.colorScheme.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ],
@@ -144,16 +153,24 @@ class PscStateRowCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   label,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
-              Text(
-                value,
-                style: theme.textTheme.labelLarge?.copyWith(
-                  color: valueColor ?? theme.colorScheme.primary,
-                  fontWeight: FontWeight.w700,
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  value,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.end,
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: valueColor ?? theme.colorScheme.primary,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ],
@@ -237,16 +254,24 @@ class PscDigestCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   topic,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
                 ),
               ),
-              Text(
-                freshness,
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: theme.textTheme.bodySmall?.color?.withValues(
-                    alpha: 0.7,
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  freshness,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.end,
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: theme.textTheme.bodySmall?.color?.withValues(
+                      alpha: 0.7,
+                    ),
                   ),
                 ),
               ),
@@ -255,6 +280,8 @@ class PscDigestCard extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             whyReason,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
             style: theme.textTheme.labelMedium?.copyWith(
               color: theme.colorScheme.primary,
               fontWeight: FontWeight.w700,
