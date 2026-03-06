@@ -19,32 +19,49 @@ class SavedDigestsScreen extends ConsumerWidget {
     final digestAsync = ref.watch(latestDigestProvider);
 
     return PscPageScaffold(
-      title: 'Saved Digests',
+      title: 'Saved Library',
       bottomNavigation: const PscBottomNav(currentIndex: 2),
       body: digestAsync.when(
         data: (digest) {
           return ListView(
             children: [
-              const PscSearchField(hintText: 'Search saved digests'),
-              const SizedBox(height: 10),
-              if (digest.items.isNotEmpty) ...[
-                DigestCardTile(item: digest.items.first, onTap: () {}),
-                const SizedBox(height: 8),
-              ],
-              const PscRuleSectionCard(
-                title: 'Collection: Strategy Signals',
-                description: '8 digests • Updated 2d ago',
-                status: 'Pinned',
-                hint: 'Tap to open',
+              _SavedLibraryHero(hasItems: digest.items.isNotEmpty),
+              const SizedBox(height: 16),
+              const PscSearchField(
+                hintText: 'Search saved briefs or collections',
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 16),
+              if (digest.items.isNotEmpty) ...[
+                const PscSectionTitle('Recently Saved'),
+                const SizedBox(height: 10),
+                DigestCardTile(item: digest.items.first, onTap: () {}),
+                const SizedBox(height: 16),
+              ],
+              const PscSectionTitle('Collections'),
+              const SizedBox(height: 10),
+              const PscRuleSectionCard(
+                title: 'Strategy Signals',
+                description:
+                    'Pinned reading list for roadmap, positioning, and market shifts.',
+                status: '8 briefs',
+                hint: 'Updated 2d ago',
+              ),
+              const SizedBox(height: 10),
+              const PscRuleSectionCard(
+                title: 'Worth Revisiting',
+                description:
+                    'Longer reads and source-dense items that deserve a second pass.',
+                status: '5 briefs',
+                hint: 'Designed for deep review',
+              ),
+              const SizedBox(height: 10),
               _SavedEmptyState(
                 title: digest.items.isEmpty
-                    ? 'Nothing yet'
-                    : 'No archived videos',
+                    ? 'Your archive is still empty.'
+                    : 'No other saved items yet.',
                 description: digest.items.isEmpty
-                    ? 'Save your first digest to build your library.'
-                    : 'Save any digest from detail to build your library.',
+                    ? 'When a digest earns a second read, save it here so it becomes part of your long-term library.'
+                    : 'Save more briefs from detail to build reusable collections.',
               ),
             ],
           );
@@ -56,6 +73,67 @@ class SavedDigestsScreen extends ConsumerWidget {
             color: Theme.of(context).colorScheme.error,
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Purpose: Render the archive hero for the saved library screen.
+class _SavedLibraryHero extends StatelessWidget {
+  /// Purpose: Construct saved library hero.
+  const _SavedLibraryHero({required this.hasItems});
+
+  final bool hasItems;
+
+  /// Purpose: Build saved library hero.
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return PscSurfaceCard(
+      emphasize: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const PscInfoPill(
+            label: 'Editorial Archive',
+            icon: Icons.collections_bookmark_outlined,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Keep the briefs worth returning to.',
+            style: theme.textTheme.headlineSmall,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Saved items turn a fast-moving digest into a durable research shelf. Pin collections, revisit dense source bundles, and keep important context nearby.',
+            style: theme.textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              PscInfoPill(
+                label: hasItems
+                    ? 'Library has active items'
+                    : 'Ready for first save',
+                icon: Icons.bookmark_outline_rounded,
+                backgroundColor: theme.colorScheme.secondary.withValues(
+                  alpha: 0.18,
+                ),
+                foregroundColor: theme.colorScheme.onSurface,
+              ),
+              PscInfoPill(
+                label: 'Collections support deep review',
+                icon: Icons.menu_book_outlined,
+                backgroundColor: theme.colorScheme.tertiary.withValues(
+                  alpha: 0.1,
+                ),
+                foregroundColor: theme.colorScheme.tertiary,
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -73,38 +151,18 @@ class _SavedEmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: theme.cardTheme.color,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: theme.dividerColor.withValues(alpha: 0.5)),
-      ),
+    return PscSurfaceCard(
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CircleAvatar(
-            radius: 20,
-            backgroundColor: theme.colorScheme.secondary,
-            child: Icon(
-              Icons.inbox,
-              size: 18,
-              color: theme.textTheme.labelSmall?.color,
-            ),
+          const PscInfoPill(
+            label: 'Archive Reminder',
+            icon: Icons.inbox_outlined,
           ),
+          const SizedBox(height: 16),
+          Text(title, style: theme.textTheme.titleLarge),
           const SizedBox(height: 8),
-          Text(
-            title,
-            style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            description,
-            textAlign: TextAlign.center,
-            style: theme.textTheme.bodySmall,
-          ),
+          Text(description, style: theme.textTheme.bodyMedium),
         ],
       ),
     );

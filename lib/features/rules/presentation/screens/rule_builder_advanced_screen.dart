@@ -27,65 +27,140 @@ class _RuleBuilderAdvancedScreenState
     final theme = Theme.of(context);
 
     return PscPageScaffold(
-      title: 'Rule Builder (Advanced)',
+      title: 'Advanced Rules',
       bottomNavigation: const PscBottomNav(currentIndex: 1),
       body: ListView(
         children: [
-          const Text('Tune precedence and ranking tweaks without ambiguity.'),
-          const SizedBox(height: 12),
-          const PscRuleSectionCard(
-            title: 'Hard Filters',
-            description: 'Exclude: politics, celebrity gossip',
-            status: 'Highest',
-            hint: 'Stage 1',
-          ),
-          const SizedBox(height: 8),
-          const PscRuleSectionCard(
-            title: 'Source Allow / Block',
-            description: 'Allow: verified outlets only',
-            status: 'Second',
-            hint: 'Stage 2',
-          ),
-          const SizedBox(height: 8),
-          const PscRuleSectionCard(
-            title: 'Topic Priority + Tone + Length',
-            description: 'Priority High > Tone Neutral > 120 words',
-            status: 'Third+',
-            hint: 'Stages 3-5',
-          ),
-          const SizedBox(height: 8),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.secondary,
-              borderRadius: BorderRadius.circular(12),
-            ),
+          PscSurfaceCard(
+            emphasize: true,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Deterministic Order',
-                  style: theme.textTheme.labelLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+                const PscInfoPill(
+                  label: 'Expert Console',
+                  icon: Icons.science_outlined,
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 16),
                 Text(
-                  'Hard > Source > Topic > Tone > Length > Rank',
+                  'Inspect the ranking pipeline without ambiguity.',
+                  style: theme.textTheme.headlineSmall,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'This view exposes precedence and lets you simulate how a rule change will ripple through the digest before it becomes the default behavior.',
+                  style: theme.textTheme.bodyMedium,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          const PscSectionTitle('Evaluation Order'),
+          const SizedBox(height: 10),
+          const PscRuleSectionCard(
+            title: '1. Hard Filters',
+            description:
+                'Remove banned topics, low-trust patterns, and known noise.',
+            status: 'Highest priority',
+            hint: 'Nothing below can override this stage',
+          ),
+          const SizedBox(height: 10),
+          const PscRuleSectionCard(
+            title: '2. Source Allow / Block',
+            description:
+                'Bias the feed toward verified outlets and away from weak evidence.',
+            status: 'Second pass',
+            hint: 'Trust calibration happens before scoring',
+          ),
+          const SizedBox(height: 10),
+          const PscRuleSectionCard(
+            title: '3. Topic, Tone, Length, Rank',
+            description:
+                'Score the remaining set and shape the final reading experience.',
+            status: 'Third and below',
+            hint: 'This is where nuance enters the brief',
+          ),
+          const SizedBox(height: 16),
+          PscSurfaceCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const PscSectionTitle('Deterministic Chain'),
+                const SizedBox(height: 14),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    PscInfoPill(
+                      label: 'Hard',
+                      backgroundColor: theme.colorScheme.primary.withValues(
+                        alpha: 0.12,
+                      ),
+                      foregroundColor: theme.colorScheme.primary,
+                    ),
+                    PscInfoPill(
+                      label: 'Source',
+                      backgroundColor: theme.colorScheme.secondary.withValues(
+                        alpha: 0.2,
+                      ),
+                      foregroundColor: theme.colorScheme.onSurface,
+                    ),
+                    PscInfoPill(
+                      label: 'Topic',
+                      backgroundColor: theme.colorScheme.secondary.withValues(
+                        alpha: 0.2,
+                      ),
+                      foregroundColor: theme.colorScheme.onSurface,
+                    ),
+                    PscInfoPill(
+                      label: 'Tone',
+                      backgroundColor: theme.colorScheme.secondary.withValues(
+                        alpha: 0.2,
+                      ),
+                      foregroundColor: theme.colorScheme.onSurface,
+                    ),
+                    PscInfoPill(
+                      label: 'Length',
+                      backgroundColor: theme.colorScheme.secondary.withValues(
+                        alpha: 0.2,
+                      ),
+                      foregroundColor: theme.colorScheme.onSurface,
+                    ),
+                    PscInfoPill(
+                      label: 'Rank',
+                      backgroundColor: theme.colorScheme.tertiary.withValues(
+                        alpha: 0.1,
+                      ),
+                      foregroundColor: theme.colorScheme.tertiary,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  'The order is intentionally rigid so a saved profile behaves the same way every time new content arrives.',
                   style: theme.textTheme.bodySmall,
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 8),
-          SwitchListTile(
-            value: _strictMode,
-            contentPadding: EdgeInsets.zero,
-            title: const Text('Strict deterministic mode'),
-            onChanged: (value) => setState(() => _strictMode = value),
+          const SizedBox(height: 10),
+          PscSurfaceCard(
+            child: SwitchListTile(
+              value: _strictMode,
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Strict deterministic mode'),
+              subtitle: const Text(
+                'Lock the entire ranking chain so preview and production outputs stay aligned.',
+              ),
+              onChanged: (value) => setState(() => _strictMode = value),
+            ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
+          PscStatusBanner(
+            message:
+                'Simulation is the safest place to test aggressive ranking changes before they affect the home brief.',
+            color: theme.colorScheme.tertiary,
+          ),
+          const SizedBox(height: 14),
           FilledButton(onPressed: () {}, child: const Text('Simulate Result')),
           const SizedBox(height: 8),
           OutlinedButton(
@@ -93,20 +168,9 @@ class _RuleBuilderAdvancedScreenState
             child: const Text('View Impacted Digest'),
           ),
           const SizedBox(height: 8),
-          Container(
-            height: 48,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: theme.colorScheme.secondary,
-              borderRadius: BorderRadius.circular(999),
-            ),
-            child: Text(
-              'Run Batch Test (Disabled)',
-              style: theme.textTheme.labelLarge?.copyWith(
-                color: theme.textTheme.labelSmall?.color,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
+          OutlinedButton(
+            onPressed: null,
+            child: const Text('Run Batch Test (Disabled)'),
           ),
         ],
       ),

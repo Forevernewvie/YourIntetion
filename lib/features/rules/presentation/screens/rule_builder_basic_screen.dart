@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../../app/router/app_router.dart';
 import '../../../../features/digest/presentation/providers/digest_providers.dart';
 import '../../../../shared/layout/psc_page_scaffold.dart';
 import '../../../../shared/widgets/psc_blocks.dart';
@@ -59,64 +61,140 @@ class _RuleBuilderBasicScreenState
   /// Purpose: Build basic rule editor interface.
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return PscPageScaffold(
-      title: 'Rule Builder (Basic)',
+      title: 'Rule Console',
       bottomNavigation: const PscBottomNav(currentIndex: 1),
       body: ListView(
         children: [
-          PscRuleSectionCard(
-            title: 'Rule 01: AI Productivity',
-            description:
-                'Tone Neutral • Daily • Max ${_aiPriority.toInt()} words',
-            status: 'Enabled',
-            hint: 'Priority: High',
+          PscSurfaceCard(
+            emphasize: true,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const PscInfoPill(
+                  label: 'Personal Curation Console',
+                  icon: Icons.tune_outlined,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Shape what earns your attention.',
+                  style: theme.textTheme.headlineSmall,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'These rules decide which topics rise, which duplicates disappear, and how the brief stays calm without becoming bland.',
+                  style: theme.textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    PscInfoPill(
+                      label: 'AI priority ${_aiPriority.toInt()}',
+                      icon: Icons.auto_graph_outlined,
+                      backgroundColor: theme.colorScheme.primary.withValues(
+                        alpha: 0.1,
+                      ),
+                      foregroundColor: theme.colorScheme.primary,
+                    ),
+                    PscInfoPill(
+                      label: _hideDuplicates ? 'Dedupe on' : 'Dedupe off',
+                      icon: Icons.filter_alt_outlined,
+                      backgroundColor: theme.colorScheme.secondary.withValues(
+                        alpha: 0.18,
+                      ),
+                      foregroundColor: theme.colorScheme.onSurface,
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 16),
+          const PscSectionTitle('Active Rule Profiles'),
+          const SizedBox(height: 10),
           const PscRuleSectionCard(
-            title: 'Rule 02: Product Strategy',
-            description: 'Tone Analytical • Weekdays',
+            title: 'AI Productivity',
+            description: 'Neutral tone, daily cadence, highest ranking weight.',
             status: 'Enabled',
-            hint: 'Priority: Medium',
+            hint: 'Primary lens for the home brief',
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
+          const PscRuleSectionCard(
+            title: 'Product Strategy',
+            description: 'Analytical framing with weekday emphasis.',
+            status: 'Enabled',
+            hint: 'Secondary pattern for strategic context',
+          ),
+          const SizedBox(height: 10),
           PscRuleSectionCard(
-            title: 'Rule 03: Creator Economy',
+            title: 'Creator Economy',
             description: _hideDuplicates
-                ? 'Tone Brief • Weekly • Dedupe ON'
-                : 'Tone Brief • Weekly • Dedupe OFF',
-            status: _hideDuplicates ? 'Enabled' : 'Paused',
-            hint: 'Priority: Low',
+                ? 'Brief weekly pulse with duplicate protection.'
+                : 'Brief weekly pulse without duplicate protection.',
+            status: _hideDuplicates ? 'Enabled' : 'Review',
+            hint: _hideDuplicates
+                ? 'Recaps stay compressed into a single signal'
+                : 'Duplicate recap risk is currently higher',
+            statusColor: _hideDuplicates
+                ? theme.colorScheme.primary
+                : theme.colorScheme.tertiary,
           ),
-          const SizedBox(height: 8),
-          PscStatusBanner(
-            message: 'Conflict rule: hard filters always win.',
-            color: const Color(0xFFA86A00),
+          const SizedBox(height: 16),
+          PscSurfaceCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const PscSectionTitle('Priority Tuning'),
+                const SizedBox(height: 12),
+                Text(
+                  'AI topic priority: ${_aiPriority.toInt()}',
+                  style: theme.textTheme.titleMedium,
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Raise this if you want AI workflow signals to outrank everything else in the brief.',
+                  style: theme.textTheme.bodySmall,
+                ),
+                Slider(
+                  min: 60,
+                  max: 180,
+                  value: _aiPriority,
+                  onChanged: (value) => setState(() => _aiPriority = value),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+          PscSurfaceCard(
+            child: SwitchListTile(
+              value: _hideDuplicates,
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Hide duplicate stories'),
+              subtitle: const Text(
+                'Keep repeated recaps and cross-posts from flooding the brief.',
+              ),
+              onChanged: (value) => setState(() => _hideDuplicates = value),
+            ),
           ),
           const SizedBox(height: 12),
-          Text(
-            'AI topic priority: ${_aiPriority.toInt()}',
-            style: Theme.of(
-              context,
-            ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w700),
+          PscStatusBanner(
+            message:
+                'Hard filters still win over softer ranking rules when conflicts appear.',
+            color: theme.colorScheme.tertiary,
           ),
-          Slider(
-            min: 60,
-            max: 180,
-            value: _aiPriority,
-            onChanged: (value) => setState(() => _aiPriority = value),
+          const SizedBox(height: 18),
+          FilledButton(
+            onPressed: _saveProfile,
+            child: const Text('Save Tuning'),
           ),
-          SwitchListTile(
-            value: _hideDuplicates,
-            contentPadding: EdgeInsets.zero,
-            title: const Text('Hide duplicate stories'),
-            onChanged: (value) => setState(() => _hideDuplicates = value),
-          ),
-          const SizedBox(height: 8),
-          FilledButton(onPressed: _saveProfile, child: const Text('Add Rule')),
           const SizedBox(height: 8),
           OutlinedButton(
-            onPressed: _saveProfile,
-            child: const Text('Save Changes'),
+            onPressed: () => context.go(AppRoutePath.rulesAdvanced),
+            child: const Text('Open Advanced Builder'),
           ),
         ],
       ),

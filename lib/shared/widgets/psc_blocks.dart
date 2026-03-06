@@ -13,7 +13,259 @@ class PscSectionTitle extends StatelessWidget {
     final theme = Theme.of(context);
     return Text(
       text,
-      style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+      style: theme.textTheme.labelLarge?.copyWith(
+        color: theme.colorScheme.primary,
+        letterSpacing: 0.3,
+      ),
+    );
+  }
+}
+
+/// Purpose: Render a reusable editorial-style surface card.
+class PscSurfaceCard extends StatelessWidget {
+  /// Purpose: Construct a padded card surface.
+  const PscSurfaceCard({
+    required this.child,
+    this.padding = const EdgeInsets.all(20),
+    this.onTap,
+    this.backgroundColor,
+    this.borderColor,
+    this.radius = 24,
+    this.emphasize = false,
+    super.key,
+  });
+
+  final Widget child;
+  final EdgeInsetsGeometry padding;
+  final VoidCallback? onTap;
+  final Color? backgroundColor;
+  final Color? borderColor;
+  final double radius;
+  final bool emphasize;
+
+  /// Purpose: Build the shared card container with optional tap behavior.
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final resolvedBackground =
+        backgroundColor ?? theme.cardTheme.color ?? theme.colorScheme.surface;
+    final resolvedBorder =
+        borderColor ??
+        theme.dividerColor.withValues(alpha: emphasize ? 0.7 : 0.5);
+    final decoration = BoxDecoration(
+      color: resolvedBackground,
+      borderRadius: BorderRadius.circular(radius),
+      border: Border.all(color: resolvedBorder),
+      boxShadow: [
+        BoxShadow(
+          color: theme.shadowColor.withValues(alpha: emphasize ? 0.16 : 0.08),
+          blurRadius: emphasize ? 30 : 20,
+          offset: const Offset(0, 10),
+        ),
+      ],
+    );
+
+    final content = Padding(padding: padding, child: child);
+    if (onTap == null) {
+      return DecoratedBox(decoration: decoration, child: content);
+    }
+
+    return Material(
+      color: Colors.transparent,
+      child: Ink(
+        decoration: decoration,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(radius),
+          child: content,
+        ),
+      ),
+    );
+  }
+}
+
+/// Purpose: Render compact metadata pill for emphasis, metrics, and status.
+class PscInfoPill extends StatelessWidget {
+  /// Purpose: Construct an editorial chip with optional icon.
+  const PscInfoPill({
+    required this.label,
+    this.icon,
+    this.backgroundColor,
+    this.foregroundColor,
+    this.padding,
+    super.key,
+  });
+
+  final String label;
+  final IconData? icon;
+  final Color? backgroundColor;
+  final Color? foregroundColor;
+  final EdgeInsetsGeometry? padding;
+
+  /// Purpose: Build the compact metadata chip.
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final resolvedForeground = foregroundColor ?? theme.colorScheme.primary;
+    final resolvedBackground =
+        backgroundColor ?? resolvedForeground.withValues(alpha: 0.12);
+    final maxWidth = (MediaQuery.sizeOf(context).width - 72).clamp(
+      120.0,
+      280.0,
+    );
+
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxWidth: maxWidth),
+      child: Container(
+        padding:
+            padding ?? const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: resolvedBackground,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: resolvedForeground.withValues(alpha: 0.16)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(icon, size: 14, color: resolvedForeground),
+              const SizedBox(width: 6),
+            ],
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: resolvedForeground,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Purpose: Render a step-aware header for onboarding flows.
+class PscStepHeader extends StatelessWidget {
+  /// Purpose: Construct onboarding step header.
+  const PscStepHeader({
+    required this.step,
+    required this.totalSteps,
+    required this.title,
+    required this.description,
+    this.tags = const [],
+    super.key,
+  });
+
+  final int step;
+  final int totalSteps;
+  final String title;
+  final String description;
+  final List<String> tags;
+
+  /// Purpose: Build the step header with progress and helper tags.
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return PscSurfaceCard(
+      emphasize: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              PscInfoPill(
+                label: 'Step $step of $totalSteps',
+                icon: Icons.auto_awesome_motion_outlined,
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 8),
+                child: Text(
+                  'Editable later',
+                  style: theme.textTheme.labelMedium,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: List.generate(totalSteps, (index) {
+              final active = index < step;
+              return Expanded(
+                child: Container(
+                  height: 5,
+                  margin: EdgeInsets.only(
+                    right: index == totalSteps - 1 ? 0 : 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: active
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.secondary.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+              );
+            }),
+          ),
+          const SizedBox(height: 18),
+          Text(title, style: theme.textTheme.headlineSmall),
+          const SizedBox(height: 8),
+          Text(description, style: theme.textTheme.bodyMedium),
+          if (tags.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: tags
+                  .map(
+                    (tag) => PscInfoPill(
+                      label: tag,
+                      backgroundColor: theme.colorScheme.secondary.withValues(
+                        alpha: 0.16,
+                      ),
+                      foregroundColor: theme.colorScheme.onSurface,
+                    ),
+                  )
+                  .toList(growable: false),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Purpose: Render concise bullet rows for product promises and tips.
+class PscBulletLine extends StatelessWidget {
+  /// Purpose: Construct a line item with leading icon.
+  const PscBulletLine({required this.label, this.icon, super.key});
+
+  final String label;
+  final IconData? icon;
+
+  /// Purpose: Build the bullet line.
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(
+          icon ?? Icons.done_rounded,
+          size: 16,
+          color: theme.colorScheme.primary,
+        ),
+        const SizedBox(width: 10),
+        Expanded(child: Text(label, style: theme.textTheme.bodySmall)),
+      ],
     );
   }
 }
@@ -44,69 +296,42 @@ class PscRuleSectionCard extends StatelessWidget {
     final theme = Theme.of(context);
     final statusTextColor = statusColor ?? theme.colorScheme.primary;
 
-    return Material(
-      color: theme.cardTheme.color,
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: theme.dividerColor.withValues(alpha: 0.5),
-            ),
-          ),
-          child: Column(
+    return PscSurfaceCard(
+      onTap: onTap,
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                title,
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
+              Expanded(
+                child: PscInfoPill(
+                  label: status,
+                  backgroundColor: statusTextColor.withValues(alpha: 0.12),
+                  foregroundColor: statusTextColor,
                 ),
               ),
-              const SizedBox(height: 4),
-              Text(
-                description,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.75),
+              if (onTap != null)
+                Icon(
+                  Icons.arrow_outward_rounded,
+                  size: 18,
+                  color: theme.colorScheme.primary,
                 ),
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      status,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.labelMedium?.copyWith(
-                        color: statusTextColor,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Flexible(
-                    child: Text(
-                      hint,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.end,
-                      style: theme.textTheme.labelMedium?.copyWith(
-                        color: theme.colorScheme.primary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
             ],
           ),
-        ),
+          const SizedBox(height: 14),
+          Text(title, style: theme.textTheme.titleLarge),
+          const SizedBox(height: 6),
+          Text(description, style: theme.textTheme.bodyMedium),
+          const SizedBox(height: 12),
+          Text(
+            hint,
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: theme.colorScheme.primary,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -133,49 +358,34 @@ class PscStateRowCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Material(
-      color: theme.cardTheme.color,
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: theme.dividerColor.withValues(alpha: 0.5),
+    return PscSurfaceCard(
+      onTap: onTap,
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  label,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+          const SizedBox(width: 12),
+          Flexible(
+            child: Text(
+              value,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.end,
+              style: theme.textTheme.labelLarge?.copyWith(
+                color: valueColor ?? theme.colorScheme.primary,
               ),
-              const SizedBox(width: 8),
-              Flexible(
-                child: Text(
-                  value,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.end,
-                  style: theme.textTheme.labelLarge?.copyWith(
-                    color: valueColor ?? theme.colorScheme.primary,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -197,20 +407,25 @@ class PscStatusBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: theme.cardTheme.color,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color),
-      ),
-      child: Text(
-        message,
-        style: theme.textTheme.labelMedium?.copyWith(
-          color: color,
-          fontWeight: FontWeight.w700,
-        ),
+    return PscSurfaceCard(
+      backgroundColor: color.withValues(alpha: 0.08),
+      borderColor: color.withValues(alpha: 0.35),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.info_outline_rounded, color: color, size: 18),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: color,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -238,63 +453,43 @@ class PscDigestCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: theme.dividerColor.withValues(alpha: 0.5)),
-        color: theme.cardTheme.color,
-      ),
+    return PscSurfaceCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              Expanded(
-                child: Text(
-                  topic,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
+              const PscInfoPill(
+                label: 'Preview Brief',
+                icon: Icons.menu_book_outlined,
               ),
-              const SizedBox(width: 8),
-              Flexible(
-                child: Text(
-                  freshness,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.end,
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    color: theme.textTheme.bodySmall?.color?.withValues(
-                      alpha: 0.7,
-                    ),
-                  ),
-                ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 8),
+                child: Text(freshness, style: theme.textTheme.labelMedium),
               ),
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 16),
+          Text(topic, style: theme.textTheme.titleLarge),
+          const SizedBox(height: 8),
           Text(
             whyReason,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.labelMedium?.copyWith(
+            style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.primary,
               fontWeight: FontWeight.w700,
             ),
           ),
-          const SizedBox(height: 6),
-          Text(summary, style: theme.textTheme.bodySmall),
-          const SizedBox(height: 8),
-          Text(
-            sourceMix,
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.7),
-            ),
+          const SizedBox(height: 12),
+          Text(summary, style: theme.textTheme.bodyMedium),
+          const SizedBox(height: 16),
+          PscInfoPill(
+            label: sourceMix,
+            icon: Icons.link_outlined,
+            backgroundColor: theme.colorScheme.tertiary.withValues(alpha: 0.1),
+            foregroundColor: theme.colorScheme.tertiary,
           ),
         ],
       ),

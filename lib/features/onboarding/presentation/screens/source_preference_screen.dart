@@ -17,66 +17,86 @@ class SourcePreferenceScreen extends StatelessWidget {
     final theme = Theme.of(context);
 
     return PscPageScaffold(
-      title: 'Set Source Preferences',
+      title: 'Source Preferences',
       body: PscAdaptiveScrollBody(
         extraBottomPadding: 8,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
-              'Allow or block source types. Feed remains deterministic.',
+            const PscStepHeader(
+              step: 2,
+              totalSteps: 4,
+              title: 'Tell the brief which sources earn trust.',
+              description:
+                  'You are not blocking content blindly. You are choosing which signal types deserve the most weight in a calm, credible digest.',
+              tags: ['Rebalance later', 'Trust is explicit'],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             const PscRuleSectionCard(
               title: 'News Sources',
-              description: 'Allow: 70% | Block: 0',
-              status: 'Allowed',
-              hint: 'Why: highest traceability',
+              description:
+                  'High traceability and cleaner attribution for lead items.',
+              status: '70% allowed',
+              hint: 'Best for original reporting and citation confidence',
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             const PscRuleSectionCard(
               title: 'Video Channels',
-              description: 'Allow: 20% | Block: 2',
-              status: 'Limited',
-              hint: 'Why: avoid recap spam',
+              description:
+                  'Useful for commentary, but capped to avoid recap overload.',
+              status: '20% limited',
+              hint: 'Strong context, lighter direct evidence',
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             const PscRuleSectionCard(
               title: 'Communities',
-              description: 'Allow: 10% | Block: 1',
-              status: 'Allowed',
-              hint: 'Why: trend signals',
+              description:
+                  'Helpful for early signals and sentiment, but not dominant.',
+              status: '10% allowed',
+              hint: 'Trend detection without replacing primary sources',
             ),
-            const SizedBox(height: 8),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(999),
-              child: Container(
-                height: 10,
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.secondary,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Row(
-                  children: [
-                    Flexible(
-                      flex: 70,
-                      child: Container(color: theme.colorScheme.primary),
-                    ),
-                    Flexible(
-                      flex: 20,
-                      child: ColoredBox(
-                        color: theme.colorScheme.secondaryContainer,
+            const SizedBox(height: 16),
+            PscSurfaceCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const PscSectionTitle('Default Mix'),
+                  const SizedBox(height: 14),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(999),
+                    child: SizedBox(
+                      height: 12,
+                      child: Row(
+                        children: [
+                          Flexible(
+                            flex: 70,
+                            child: Container(color: theme.colorScheme.primary),
+                          ),
+                          Flexible(
+                            flex: 20,
+                            child: ColoredBox(
+                              color: theme.colorScheme.secondaryContainer,
+                            ),
+                          ),
+                          Flexible(
+                            flex: 10,
+                            child: ColoredBox(
+                              color: theme.colorScheme.tertiary,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    Flexible(
-                      flex: 10,
-                      child: ColoredBox(color: theme.colorScheme.tertiary),
-                    ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'A heavier news mix keeps the feed grounded in primary sources while still allowing commentary and community signals to surface.',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ],
               ),
             ),
-            const Spacer(),
+            const SizedBox(height: 18),
             FilledButton(
               onPressed: () => context.go(AppRoutePath.onboardingToneFrequency),
               child: const Text('Next: Tone & Frequency'),
@@ -85,6 +105,10 @@ class SourcePreferenceScreen extends StatelessWidget {
             OutlinedButton(
               onPressed: () => context.go(AppRoutePath.onboardingTopics),
               child: const Text('Back'),
+            ),
+            TextButton(
+              onPressed: () => context.go(AppRoutePath.onboardingPreview),
+              child: const Text('Preview Current Setup'),
             ),
           ],
         ),

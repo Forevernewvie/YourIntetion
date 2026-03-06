@@ -38,28 +38,76 @@ class _ToneFrequencyScreenState extends ConsumerState<ToneFrequencyScreen> {
     final theme = Theme.of(context);
 
     return PscPageScaffold(
-      title: 'Tone + Frequency',
+      title: 'Tone & Frequency',
       body: PscAdaptiveScrollBody(
         extraBottomPadding: 8,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const PscRuleSectionCard(
-              title: 'Digest Tone',
-              description: 'Neutral / Analytical / Brief',
-              status: 'Neutral',
-              hint: 'Why: lowest cognitive load',
+            const PscStepHeader(
+              step: 3,
+              totalSteps: 4,
+              title: 'Set how the brief should sound and arrive.',
+              description:
+                  'Choose a cadence that feels sustainable. The goal is a digest you actually return to, not another noisy notification stream.',
+              tags: ['Daily by default', 'Tone can evolve'],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 16),
+            PscSurfaceCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const PscSectionTitle('Digest Tone'),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Neutral is the default because it lowers cognitive load while keeping room for analytical context when a story needs it.',
+                    style: theme.textTheme.bodyMedium,
+                  ),
+                  const SizedBox(height: 14),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      PscInfoPill(
+                        label: 'Neutral',
+                        icon: Icons.radio_button_checked,
+                        backgroundColor: theme.colorScheme.primary.withValues(
+                          alpha: 0.12,
+                        ),
+                        foregroundColor: theme.colorScheme.primary,
+                      ),
+                      PscInfoPill(
+                        label: 'Analytical',
+                        icon: Icons.analytics_outlined,
+                        backgroundColor: theme.colorScheme.secondary.withValues(
+                          alpha: 0.18,
+                        ),
+                        foregroundColor: theme.colorScheme.onSurface,
+                      ),
+                      PscInfoPill(
+                        label: 'Brief',
+                        icon: Icons.short_text_rounded,
+                        backgroundColor: theme.colorScheme.secondary.withValues(
+                          alpha: 0.18,
+                        ),
+                        foregroundColor: theme.colorScheme.onSurface,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
             const PscRuleSectionCard(
-              title: 'Frequency',
-              description: 'Daily 08:00 + Weekly Deep Dive',
+              title: 'Delivery Cadence',
+              description:
+                  'Daily 08:00 brief with a weekly deeper scan on Friday.',
               status: 'Active',
-              hint: 'Edit in Notification Preferences',
+              hint: 'Designed for a calm, predictable reading habit',
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             PscStateRowCard(
-              label: 'Digest alert preview',
+              label: 'Preview digest alert',
               value: _digestPreviewEnabled ? 'ON' : 'OFF',
               valueColor: _digestPreviewEnabled
                   ? theme.colorScheme.primary
@@ -68,10 +116,10 @@ class _ToneFrequencyScreenState extends ConsumerState<ToneFrequencyScreen> {
                 _digestPreviewEnabled = !_digestPreviewEnabled;
               }),
             ),
-            const Spacer(),
+            const SizedBox(height: 18),
             FilledButton(
               onPressed: _finishOnboarding,
-              child: const Text('Finish Setup'),
+              child: const Text('Finish & Preview Digest'),
             ),
             const SizedBox(height: 8),
             OutlinedButton(

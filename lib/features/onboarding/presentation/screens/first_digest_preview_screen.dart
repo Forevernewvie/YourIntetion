@@ -15,49 +15,60 @@ class FirstDigestPreviewScreen extends StatelessWidget {
   /// Purpose: Build deterministic preview UI demonstrating why-items and citation trace.
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return PscPageScaffold(
-      title: 'First Digest Preview',
+      title: 'Digest Preview',
       body: PscAdaptiveScrollBody(
         extraBottomPadding: 8,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            const PscStepHeader(
+              step: 4,
+              totalSteps: 4,
+              title: 'Preview how your brief will feel.',
+              description:
+                  'This is not a generic news feed. It is a ranked reading surface that explains why each item earned attention.',
+              tags: ['Review before home', 'Tune if needed'],
+            ),
+            const SizedBox(height: 16),
             const PscSearchField(
               hintText: 'What changed from your default feed',
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
             const PscDigestCard(
               topic: 'AI assistants in productivity tools',
               whyReason: 'Why this appears: Topic AI (High) + Allowed sources',
               summary:
-                  'Rule-based summary with citation trace. Tap details to verify sources.',
+                  'Rule-based summary with citation trace. Tap details to verify sources and understand the ranking logic.',
               freshness: '18m ago',
-              sourceMix: 'Mix: News 2 / Community 1',
+              sourceMix: 'News 2 / Community 1',
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             const PscDigestCard(
               topic: 'Creator economy monetization shifts',
               whyReason: 'Why this appears: Creator Economy (Low)',
               summary:
-                  'Lower-priority topics rank lower than your focus topics.',
+                  'Lower-priority topics still surface, but they sit behind your stronger focus areas and source preferences.',
               freshness: '44m ago',
-              sourceMix: 'Mix: Video 1 / News 1 / Community 1',
+              sourceMix: 'Video 1 / News 1 / Community 1',
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             PscStatusBanner(
               message:
-                  'Not right yet? Adjust tone or source rules before continuing.',
-              color: Theme.of(context).colorScheme.error,
+                  'Not quite right? Adjust the tone or source mix now before this becomes your default home feed.',
+              color: theme.colorScheme.tertiary,
             ),
-            const Spacer(),
+            const SizedBox(height: 18),
             FilledButton(
               onPressed: () => context.go(AppRoutePath.home),
-              child: const Text('Looks good, go to Home'),
+              child: const Text('Looks Good, Go Home'),
             ),
             const SizedBox(height: 8),
             OutlinedButton(
               onPressed: () => context.go(AppRoutePath.onboardingToneFrequency),
-              child: const Text('Back to Tone + Frequency'),
+              child: const Text('Back to Tone & Frequency'),
             ),
           ],
         ),
