@@ -31,33 +31,82 @@ class _NotificationPreferencesScreenState
       bottomNavigation: const PscBottomNav(currentIndex: 3),
       body: ListView(
         children: [
-          const Text('Control frequency without reintroducing feed anxiety.'),
-          const SizedBox(height: 12),
+          PscSurfaceCard(
+            emphasize: true,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const PscInfoPill(
+                  label: 'Calm Frequency',
+                  icon: Icons.notifications_active_outlined,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Keep useful alerts without feed anxiety.',
+                  style: theme.textTheme.headlineSmall,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Delivery should feel predictable and light. This screen keeps the brief on schedule while protecting your quiet hours.',
+                  style: theme.textTheme.bodyMedium,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
           PscStateRowCard(
             label: 'Morning digest (08:00)',
             value: _morningDigest ? 'ON' : 'OFF',
             valueColor: _morningDigest
-                ? const Color(0xFF1B8F5A)
+                ? theme.colorScheme.primary
                 : theme.textTheme.labelSmall?.color,
             onTap: () => setState(() => _morningDigest = !_morningDigest),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           PscStateRowCard(
             label: 'Breaking alerts',
             value: _breakingChanges ? 'ON' : 'OFF',
             valueColor: _breakingChanges
-                ? const Color(0xFF1B8F5A)
+                ? theme.colorScheme.primary
                 : theme.textTheme.labelSmall?.color,
             onTap: () => setState(() => _breakingChanges = !_breakingChanges),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           const PscStateRowCard(label: 'Quiet hours', value: '22:00 - 07:00'),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
+          PscSurfaceCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const PscSectionTitle('Delivery Guidance'),
+                const SizedBox(height: 14),
+                const PscBulletLine(
+                  label:
+                      'Use a single daily brief as the default reading moment.',
+                  icon: Icons.schedule_outlined,
+                ),
+                const SizedBox(height: 8),
+                const PscBulletLine(
+                  label:
+                      'Keep breaking alerts off unless a topic truly requires urgency.',
+                  icon: Icons.warning_amber_outlined,
+                ),
+                const SizedBox(height: 8),
+                const PscBulletLine(
+                  label:
+                      'Quiet hours protect focus and reduce notification fatigue.',
+                  icon: Icons.bedtime_outlined,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
           PscStatusBanner(
-            message: 'Push permission denied on device. Enable in OS settings.',
+            message:
+                'Push permission is currently denied on this device. Enable it in system settings if you want alerts to arrive on schedule.',
             color: theme.colorScheme.error,
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           OutlinedButton(
             onPressed: () {
               ScaffoldMessenger.of(context).showSnackBar(

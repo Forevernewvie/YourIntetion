@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_router.dart';
+import '../../../../features/digest/domain/entities/digest_item.dart';
 import '../../../../shared/layout/psc_page_scaffold.dart';
 import '../../../../shared/widgets/digest_card_tile.dart';
 import '../../../../shared/widgets/psc_blocks.dart';
@@ -29,46 +30,77 @@ class HomeDigestFeedScreen extends ConsumerWidget {
           if (!hasItems) {
             return ListView(
               children: [
+                _DigestOverviewCard(
+                  totalItems: 0,
+                  freshestMinutes: 0,
+                  totalCitations: 0,
+                  topReason:
+                      'No brief is ready yet. Refresh to pull your next set.',
+                  onOpenLead: () =>
+                      ref.read(digestRefreshTickProvider.notifier).state++,
+                ),
+                const SizedBox(height: 16),
                 const PscSearchField(hintText: 'Search topics or sources'),
-                const SizedBox(height: 10),
+                const SizedBox(height: 16),
                 _EmptyDigestState(
                   onRetry: () =>
                       ref.read(digestRefreshTickProvider.notifier).state++,
-                ),
-                const SizedBox(height: 8),
-                OutlinedButton(
-                  onPressed: () =>
-                      ref.read(digestRefreshTickProvider.notifier).state++,
-                  child: const Text('Retry Refresh'),
                 ),
               ],
             );
           }
 
-          return Column(
+          final leadItem = digest.items.first;
+          final totalCitations = digest.items.fold<int>(
+            0,
+            (sum, item) => sum + item.citations.length,
+          );
+          final freshestMinutes = digest.items
+              .map((item) => item.freshnessMinutes)
+              .reduce((value, element) => value < element ? value : element);
+
+          return ListView(
             children: [
-              const PscSearchField(hintText: 'Search topics or sources'),
+              _DigestOverviewCard(
+                totalItems: digest.items.length,
+                freshestMinutes: freshestMinutes,
+                totalCitations: totalCitations,
+                topReason: leadItem.whyReason,
+                onOpenLead: () =>
+                    context.go(AppRoutePath.digestDetailById(digest.id)),
+              ),
+              const SizedBox(height: 16),
+              const PscSearchField(
+                hintText: 'Search a topic, source, or brief',
+              ),
+              const SizedBox(height: 18),
+              const PscSectionTitle('Lead Brief'),
               const SizedBox(height: 10),
-              Expanded(
-                child: ListView.separated(
-                  itemCount: digest.items.length,
-                  separatorBuilder: (context, index) =>
-                      const SizedBox(height: 8),
-                  itemBuilder: (context, index) {
-                    final item = digest.items[index];
-                    return DigestCardTile(
+              _LeadDigestCard(
+                item: leadItem,
+                onOpen: () =>
+                    context.go(AppRoutePath.digestDetailById(digest.id)),
+              ),
+              if (digest.items.length > 1) ...[
+                const SizedBox(height: 18),
+                const PscSectionTitle('More Because Of Your Rules'),
+                const SizedBox(height: 10),
+                ...digest.items.skip(1).map((item) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: DigestCardTile(
                       item: item,
                       onTap: () =>
                           context.go(AppRoutePath.digestDetailById(digest.id)),
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(height: 8),
+                    ),
+                  );
+                }),
+              ],
+              const SizedBox(height: 6),
               OutlinedButton(
                 onPressed: () =>
                     ref.read(digestRefreshTickProvider.notifier).state++,
-                child: const Text('Retry Refresh'),
+                child: const Text('Refresh Brief'),
               ),
             ],
           );
@@ -78,7 +110,8 @@ class HomeDigestFeedScreen extends ConsumerWidget {
           children: [
             const SizedBox(height: 12),
             PscStatusBanner(
-              message: 'Failed to load latest digest. Try again.',
+              message:
+                  'Failed to load your digest. Refresh to pull a new brief.',
               color: Theme.of(context).colorScheme.error,
             ),
             const SizedBox(height: 12),
@@ -89,6 +122,183 @@ class HomeDigestFeedScreen extends ConsumerWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Purpose: Render digest overview hero that frames why the feed matters today.
+class _DigestOverviewCard extends StatelessWidget {
+  /// Purpose: Construct digest overview hero.
+  const _DigestOverviewCard({
+    required this.totalItems,
+    required this.freshestMinutes,
+    required this.totalCitations,
+    required this.topReason,
+    required this.onOpenLead,
+  });
+
+  final int totalItems;
+  final int freshestMinutes;
+  final int totalCitations;
+  final String topReason;
+  final VoidCallback onOpenLead;
+
+  /// Purpose: Build digest overview hero.
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return PscSurfaceCard(
+      emphasize: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              const PscInfoPill(
+                label: 'Personalized Brief',
+                icon: Icons.auto_awesome_outlined,
+              ),
+              PscInfoPill(
+                label: '$totalItems ranked items',
+                icon: Icons.view_agenda_outlined,
+                backgroundColor: theme.colorScheme.secondary.withValues(
+                  alpha: 0.18,
+                ),
+                foregroundColor: theme.colorScheme.onSurface,
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Your calm read is ready.',
+            style: theme.textTheme.headlineSmall,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Today\'s lead signals come with traceable sources and explicit rule matches so you can skim fast without losing context.',
+            style: theme.textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 18),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              PscInfoPill(
+                label: totalItems == 0
+                    ? 'Waiting for items'
+                    : '$freshestMinutes min freshness',
+                icon: Icons.schedule_outlined,
+                backgroundColor: theme.colorScheme.primary.withValues(
+                  alpha: 0.1,
+                ),
+                foregroundColor: theme.colorScheme.primary,
+              ),
+              PscInfoPill(
+                label: '$totalCitations citations',
+                icon: Icons.link_outlined,
+                backgroundColor: theme.colorScheme.tertiary.withValues(
+                  alpha: 0.1,
+                ),
+                foregroundColor: theme.colorScheme.tertiary,
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Lead reason',
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: theme.colorScheme.primary,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(topReason, style: theme.textTheme.bodyMedium),
+          const SizedBox(height: 18),
+          FilledButton(
+            onPressed: onOpenLead,
+            child: Text(
+              totalItems == 0 ? 'Refresh My Brief' : 'Open Lead Brief',
+            ),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton(
+            onPressed: () => context.go(AppRoutePath.rulesBasic),
+            child: const Text('Tune My Rules'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Purpose: Render the featured digest card with stronger hierarchy than list tiles.
+class _LeadDigestCard extends StatelessWidget {
+  /// Purpose: Construct lead digest card.
+  const _LeadDigestCard({required this.item, required this.onOpen});
+
+  final DigestItem item;
+  final VoidCallback onOpen;
+
+  /// Purpose: Build featured digest card.
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return PscSurfaceCard(
+      onTap: onOpen,
+      emphasize: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              PscInfoPill(
+                label: 'Open now',
+                icon: Icons.arrow_forward_rounded,
+                backgroundColor: theme.colorScheme.tertiary.withValues(
+                  alpha: 0.12,
+                ),
+                foregroundColor: theme.colorScheme.tertiary,
+              ),
+              const Spacer(),
+              Text(
+                '${item.freshnessMinutes}m ago',
+                style: theme.textTheme.labelMedium,
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          Text(item.topic, style: theme.textTheme.headlineSmall),
+          const SizedBox(height: 10),
+          Text(item.summary, style: theme.textTheme.bodyLarge),
+          const SizedBox(height: 14),
+          Text(
+            item.whyReason,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.primary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '${item.citations.length} traceable sources attached',
+                  style: theme.textTheme.labelMedium,
+                ),
+              ),
+              Icon(
+                Icons.arrow_outward_rounded,
+                size: 20,
+                color: theme.colorScheme.primary,
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -105,23 +315,25 @@ class _EmptyDigestState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Center(
+    return PscSurfaceCard(
       child: Column(
-        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          const PscInfoPill(
+            label: 'No Brief Yet',
+            icon: Icons.hourglass_empty_rounded,
+          ),
+          const SizedBox(height: 16),
           Text(
-            'No digest items yet.',
-            style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
+            'Your next digest is still forming.',
+            style: theme.textTheme.titleLarge,
           ),
           const SizedBox(height: 8),
           Text(
-            'Try adjusting rule preferences or refresh later.',
-            textAlign: TextAlign.center,
-            style: theme.textTheme.bodySmall,
+            'Adjust your rule preferences or pull again in a few minutes to surface a fresh set of explainable items.',
+            style: theme.textTheme.bodyMedium,
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 18),
           FilledButton(onPressed: onRetry, child: const Text('Retry Now')),
         ],
       ),
@@ -138,22 +350,32 @@ class _LoadingSkeletonCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: theme.cardTheme.color,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: theme.dividerColor.withValues(alpha: 0.5)),
-      ),
+    return PscSurfaceCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _SkeletonBar(width: 220),
+          Container(
+            width: 110,
+            height: 30,
+            decoration: BoxDecoration(
+              color: theme.colorScheme.secondary.withValues(alpha: 0.4),
+              borderRadius: BorderRadius.circular(999),
+            ),
+          ),
+          const SizedBox(height: 18),
+          _SkeletonBar(width: 240, height: 26),
+          const SizedBox(height: 10),
+          _SkeletonBar(width: double.infinity),
           const SizedBox(height: 8),
-          _SkeletonBar(width: 320),
-          const SizedBox(height: 8),
-          _SkeletonBar(width: 280),
+          _SkeletonBar(width: 260),
+          const SizedBox(height: 18),
+          Row(
+            children: const [
+              Expanded(child: _SkeletonBar(width: double.infinity, height: 36)),
+              SizedBox(width: 8),
+              Expanded(child: _SkeletonBar(width: double.infinity, height: 36)),
+            ],
+          ),
         ],
       ),
     );
@@ -163,18 +385,19 @@ class _LoadingSkeletonCard extends StatelessWidget {
 /// Purpose: Render one horizontal skeleton placeholder.
 class _SkeletonBar extends StatelessWidget {
   /// Purpose: Construct skeleton bar with fixed width.
-  const _SkeletonBar({required this.width});
+  const _SkeletonBar({required this.width, this.height = 10});
 
   final double width;
+  final double height;
 
   /// Purpose: Build one skeleton line.
   @override
   Widget build(BuildContext context) {
     return Container(
       width: width,
-      height: 10,
+      height: height,
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.secondary,
+        color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.45),
         borderRadius: BorderRadius.circular(999),
       ),
     );
@@ -191,8 +414,10 @@ class _LoadingOnlyState extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView(
       children: const [
+        _LoadingSkeletonCard(),
+        SizedBox(height: 16),
         PscSearchField(hintText: 'Search topics or sources'),
-        SizedBox(height: 10),
+        SizedBox(height: 16),
         _LoadingSkeletonCard(),
       ],
     );

@@ -6,6 +6,7 @@ import '../../../../app/router/app_router.dart';
 import '../../../../core/error/app_failure.dart';
 import '../../../../shared/layout/psc_adaptive_scroll_body.dart';
 import '../../../../shared/layout/psc_page_scaffold.dart';
+import '../../../../shared/widgets/psc_blocks.dart';
 import '../providers/auth_providers.dart';
 
 /// Purpose: Render account registration form for first-time users.
@@ -72,106 +73,131 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
-                'Create your account. Email verification is required before digest access.',
-                style: theme.textTheme.bodyMedium,
+              PscSurfaceCard(
+                emphasize: true,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const PscInfoPill(
+                      label: 'Start With Trust',
+                      icon: Icons.verified_user_outlined,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Build a digest profile that can explain itself.',
+                      style: theme.textTheme.headlineSmall,
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      'Create your account first. After email verification you will set the topics, sources, and cadence that shape every brief.',
+                      style: theme.textTheme.bodyMedium,
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 16),
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(labelText: 'Name'),
-                validator: (value) {
-                  final input = (value ?? '').trim();
-                  if (input.isEmpty) {
-                    return 'Name is required.';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _emailController,
-                keyboardType: TextInputType.emailAddress,
-                autocorrect: false,
-                decoration: const InputDecoration(
-                  labelText: 'Email',
-                  hintText: 'you@example.com',
-                ),
-                validator: (value) {
-                  final input = (value ?? '').trim();
-                  if (input.isEmpty || !input.contains('@')) {
-                    return 'Enter a valid email address.';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _passwordController,
-                obscureText: _obscurePassword,
-                autocorrect: false,
-                decoration: InputDecoration(
-                  labelText: 'Password',
-                  suffixIcon: IconButton(
-                    onPressed: () => setState(() {
-                      _obscurePassword = !_obscurePassword;
-                    }),
-                    icon: Icon(
-                      _obscurePassword
-                          ? Icons.visibility_outlined
-                          : Icons.visibility_off_outlined,
+              PscSurfaceCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const PscSectionTitle('Account Details'),
+                    const SizedBox(height: 14),
+                    TextFormField(
+                      controller: _nameController,
+                      decoration: const InputDecoration(labelText: 'Name'),
+                      validator: (value) {
+                        final input = (value ?? '').trim();
+                        if (input.isEmpty) {
+                          return 'Name is required.';
+                        }
+                        return null;
+                      },
                     ),
-                  ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      autocorrect: false,
+                      decoration: const InputDecoration(
+                        labelText: 'Email',
+                        hintText: 'you@example.com',
+                      ),
+                      validator: (value) {
+                        final input = (value ?? '').trim();
+                        if (input.isEmpty || !input.contains('@')) {
+                          return 'Enter a valid email address.';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _passwordController,
+                      obscureText: _obscurePassword,
+                      autocorrect: false,
+                      decoration: InputDecoration(
+                        labelText: 'Password',
+                        suffixIcon: IconButton(
+                          onPressed: () => setState(() {
+                            _obscurePassword = !_obscurePassword;
+                          }),
+                          icon: Icon(
+                            _obscurePassword
+                                ? Icons.visibility_outlined
+                                : Icons.visibility_off_outlined,
+                          ),
+                        ),
+                      ),
+                      validator: (value) {
+                        final input = value ?? '';
+                        if (input.length < 8) {
+                          return 'Password must be at least 8 characters.';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                      controller: _confirmController,
+                      obscureText: _obscurePassword,
+                      autocorrect: false,
+                      decoration: const InputDecoration(
+                        labelText: 'Confirm Password',
+                      ),
+                      validator: (value) {
+                        if ((value ?? '') != _passwordController.text) {
+                          return 'Password confirmation does not match.';
+                        }
+                        return null;
+                      },
+                    ),
+                    if (errorMessage != null) ...[
+                      const SizedBox(height: 12),
+                      PscStatusBanner(
+                        message: errorMessage,
+                        color: theme.colorScheme.error,
+                      ),
+                    ],
+                    const SizedBox(height: 16),
+                    FilledButton(
+                      onPressed: isLoading ? null : _submit,
+                      child: isLoading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Text('Create Account'),
+                    ),
+                    const SizedBox(height: 8),
+                    OutlinedButton(
+                      onPressed: isLoading
+                          ? null
+                          : () => context.go(AppRoutePath.login),
+                      child: const Text('Back to Sign In'),
+                    ),
+                  ],
                 ),
-                validator: (value) {
-                  final input = value ?? '';
-                  if (input.length < 8) {
-                    return 'Password must be at least 8 characters.';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _confirmController,
-                obscureText: _obscurePassword,
-                autocorrect: false,
-                decoration: const InputDecoration(
-                  labelText: 'Confirm Password',
-                ),
-                validator: (value) {
-                  if ((value ?? '') != _passwordController.text) {
-                    return 'Password confirmation does not match.';
-                  }
-                  return null;
-                },
-              ),
-              if (errorMessage != null) ...[
-                const SizedBox(height: 12),
-                Text(
-                  errorMessage,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.error,
-                  ),
-                ),
-              ],
-              const Spacer(),
-              FilledButton(
-                onPressed: isLoading ? null : _submit,
-                child: isLoading
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Create Account'),
-              ),
-              const SizedBox(height: 8),
-              OutlinedButton(
-                onPressed: isLoading
-                    ? null
-                    : () => context.go(AppRoutePath.login),
-                child: const Text('Back to Sign In'),
               ),
             ],
           ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../features/digest/domain/entities/digest_item.dart';
+import 'psc_blocks.dart';
 
 /// Purpose: Render digest item with explainability and citation metadata.
 class DigestCardTile extends StatelessWidget {
@@ -14,112 +15,74 @@ class DigestCardTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: theme.dividerColor.withValues(alpha: 0.55)),
-        ),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        item.topic,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.labelMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Flexible(
-                      child: Text(
-                        '${item.freshnessMinutes}m ago',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.end,
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: theme.textTheme.labelSmall?.color?.withValues(
-                            alpha: 0.8,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+    return PscSurfaceCard(
+      onTap: onTap,
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              PscInfoPill(
+                label: '${item.freshnessMinutes}m ago',
+                icon: Icons.schedule_outlined,
+                backgroundColor: theme.colorScheme.secondary.withValues(
+                  alpha: 0.18,
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  'Why: ${item.whyReason}',
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.primary,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  item.summary,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    height: 1.3,
-                    color: theme.colorScheme.onSurface.withValues(
-                      alpha: isDark ? 0.95 : 0.9,
-                    ),
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.secondary.withValues(
-                          alpha: isDark ? 0.9 : 1,
-                        ),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: Text(
-                        '${item.citations.length} citations',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Source mix ${item.citations.length}/${item.citations.length + 1}',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: theme.textTheme.labelSmall?.color?.withValues(
-                            alpha: 0.8,
-                          ),
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+                foregroundColor: theme.colorScheme.primary,
+              ),
+              const Spacer(),
+              Icon(
+                Icons.arrow_outward_rounded,
+                size: 18,
+                color: theme.colorScheme.primary,
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(item.topic, style: theme.textTheme.titleLarge),
+          const SizedBox(height: 8),
+          Text(
+            item.summary,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            item.whyReason,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.primary,
+              fontWeight: FontWeight.w700,
             ),
           ),
-        ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              PscInfoPill(
+                label: '${item.citations.length} traceable sources',
+                icon: Icons.link_outlined,
+                backgroundColor: theme.colorScheme.tertiary.withValues(
+                  alpha: 0.1,
+                ),
+                foregroundColor: theme.colorScheme.tertiary,
+              ),
+              PscInfoPill(
+                label: 'Personalized by rules',
+                icon: Icons.tune_outlined,
+                backgroundColor: theme.colorScheme.primary.withValues(
+                  alpha: 0.09,
+                ),
+                foregroundColor: theme.colorScheme.onSurface,
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
