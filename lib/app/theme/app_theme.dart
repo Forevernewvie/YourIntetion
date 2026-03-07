@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../core/constants/app_constants.dart';
+
 /// Purpose: Centralize app light and dark theme tokens.
 final class AppTheme {
   AppTheme._();
@@ -88,6 +90,7 @@ final class AppTheme {
     );
   }
 
+  /// Purpose: Compose a shared theme from reusable color, typography, and control tokens.
   static ThemeData _buildTheme({
     required Brightness brightness,
     required ColorScheme colorScheme,
@@ -201,7 +204,9 @@ final class AppTheme {
         elevation: 0,
         margin: EdgeInsets.zero,
         shadowColor: Colors.transparent,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppUiRadius.xxl),
+        ),
       ),
       appBarTheme: AppBarTheme(
         centerTitle: false,
@@ -217,29 +222,29 @@ final class AppTheme {
         hintStyle: textTheme.bodyMedium?.copyWith(color: mutedTextColor),
         labelStyle: textTheme.labelLarge?.copyWith(color: mutedTextColor),
         contentPadding: const EdgeInsets.symmetric(
-          horizontal: 18,
-          vertical: 18,
+          horizontal: AppUiSpacing.section,
+          vertical: AppUiSpacing.section,
         ),
         prefixIconColor: mutedTextColor,
         suffixIconColor: mutedTextColor,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(AppUiRadius.xl),
           borderSide: BorderSide(color: dividerColor),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(AppUiRadius.xl),
           borderSide: BorderSide(color: dividerColor),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(AppUiRadius.xl),
           borderSide: BorderSide(color: colorScheme.primary, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(AppUiRadius.xl),
           borderSide: BorderSide(color: colorScheme.error),
         ),
         focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(AppUiRadius.xl),
           borderSide: BorderSide(color: colorScheme.error, width: 1.5),
         ),
       ),
@@ -250,9 +255,12 @@ final class AppTheme {
           disabledBackgroundColor: altSurfaceColor,
           disabledForegroundColor: mutedTextColor,
           minimumSize: const Size(double.infinity, 54),
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppUiSpacing.section,
+            vertical: AppUiSpacing.xl,
+          ),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(AppUiRadius.lg),
           ),
           textStyle: textTheme.labelLarge,
         ),
@@ -261,10 +269,13 @@ final class AppTheme {
         style: OutlinedButton.styleFrom(
           foregroundColor: colorScheme.primary,
           minimumSize: const Size(double.infinity, 54),
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppUiSpacing.section,
+            vertical: AppUiSpacing.xl,
+          ),
           side: BorderSide(color: dividerColor),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(AppUiRadius.lg),
           ),
           textStyle: textTheme.labelLarge,
         ),
@@ -305,7 +316,7 @@ final class AppTheme {
         color: colorScheme.primary,
         circularTrackColor: altSurfaceColor,
       ),
-      iconTheme: IconThemeData(color: mutedTextColor, size: 20),
+      iconTheme: IconThemeData(color: mutedTextColor, size: AppUiSize.iconLg),
     );
   }
 }

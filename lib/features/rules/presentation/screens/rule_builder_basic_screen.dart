@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_router.dart';
+import '../../../../core/constants/app_constants.dart';
 import '../../../../features/digest/presentation/providers/digest_providers.dart';
+import '../../../../shared/feedback/app_feedback_messenger.dart';
 import '../../../../shared/layout/psc_page_scaffold.dart';
 import '../../../../shared/widgets/psc_blocks.dart';
 import '../../../../shared/widgets/psc_bottom_nav.dart';
@@ -51,11 +53,18 @@ class _RuleBuilderBasicScreenState
     );
 
     await ref.read(saveRuleProfileControllerProvider).save(nextProfile);
-    if (mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Basic rules saved.')));
+    if (!mounted) {
+      return;
     }
+    AppFeedbackMessenger.showSuccess(
+      context,
+      message: AppFeedbackMessage.basicRulesSaved,
+      event: 'rules_basic_saved',
+      fields: {
+        'aiPriority': _aiPriority.toInt(),
+        'hideDuplicates': _hideDuplicates,
+      },
+    );
   }
 
   /// Purpose: Build basic rule editor interface.

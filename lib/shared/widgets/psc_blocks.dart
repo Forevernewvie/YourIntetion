@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../core/constants/app_constants.dart';
+
 /// Purpose: Render section title with consistent heading weight.
 class PscSectionTitle extends StatelessWidget {
   /// Purpose: Construct section title with required text.
@@ -26,11 +28,11 @@ class PscSurfaceCard extends StatelessWidget {
   /// Purpose: Construct a padded card surface.
   const PscSurfaceCard({
     required this.child,
-    this.padding = const EdgeInsets.all(20),
+    this.padding = const EdgeInsets.all(AppUiSpacing.card),
     this.onTap,
     this.backgroundColor,
     this.borderColor,
-    this.radius = 24,
+    this.radius = AppUiRadius.xxl,
     this.emphasize = false,
     super.key,
   });
@@ -59,8 +61,8 @@ class PscSurfaceCard extends StatelessWidget {
       boxShadow: [
         BoxShadow(
           color: theme.shadowColor.withValues(alpha: emphasize ? 0.16 : 0.08),
-          blurRadius: emphasize ? 30 : 20,
-          offset: const Offset(0, 10),
+          blurRadius: emphasize ? 30 : AppUiSpacing.card,
+          offset: const Offset(0, AppUiSpacing.md),
         ),
       ],
     );
@@ -109,27 +111,32 @@ class PscInfoPill extends StatelessWidget {
     final resolvedForeground = foregroundColor ?? theme.colorScheme.primary;
     final resolvedBackground =
         backgroundColor ?? resolvedForeground.withValues(alpha: 0.12);
-    final maxWidth = (MediaQuery.sizeOf(context).width - 72).clamp(
-      120.0,
-      280.0,
-    );
+    final maxWidth =
+        (MediaQuery.sizeOf(context).width - AppUiSize.pillMaxWidthInset).clamp(
+          AppUiSize.pillMinWidth,
+          AppUiSize.pillMaxWidth,
+        );
 
     return ConstrainedBox(
       constraints: BoxConstraints(maxWidth: maxWidth),
       child: Container(
         padding:
-            padding ?? const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding ??
+            const EdgeInsets.symmetric(
+              horizontal: AppUiSpacing.lg,
+              vertical: AppUiSpacing.sm,
+            ),
         decoration: BoxDecoration(
           color: resolvedBackground,
-          borderRadius: BorderRadius.circular(999),
+          borderRadius: BorderRadius.circular(AppUiRadius.pill),
           border: Border.all(color: resolvedForeground.withValues(alpha: 0.16)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             if (icon != null) ...[
-              Icon(icon, size: 14, color: resolvedForeground),
-              const SizedBox(width: 6),
+              Icon(icon, size: AppUiSize.iconXs, color: resolvedForeground),
+              const SizedBox(width: AppUiSpacing.xs),
             ],
             Flexible(
               child: Text(
@@ -178,8 +185,8 @@ class PscStepHeader extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Wrap(
-            spacing: 8,
-            runSpacing: 8,
+            spacing: AppUiSpacing.sm,
+            runSpacing: AppUiSpacing.sm,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               PscInfoPill(
@@ -187,7 +194,10 @@ class PscStepHeader extends StatelessWidget {
                 icon: Icons.auto_awesome_motion_outlined,
               ),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 2,
+                  vertical: AppUiSpacing.sm,
+                ),
                 child: Text(
                   'Editable later',
                   style: theme.textTheme.labelMedium,
@@ -195,35 +205,35 @@ class PscStepHeader extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppUiSpacing.xxl),
           Row(
             children: List.generate(totalSteps, (index) {
               final active = index < step;
               return Expanded(
                 child: Container(
-                  height: 5,
+                  height: AppUiSize.stepProgressHeight,
                   margin: EdgeInsets.only(
-                    right: index == totalSteps - 1 ? 0 : 6,
+                    right: index == totalSteps - 1 ? 0 : AppUiSpacing.xs,
                   ),
                   decoration: BoxDecoration(
                     color: active
                         ? theme.colorScheme.primary
                         : theme.colorScheme.secondary.withValues(alpha: 0.5),
-                    borderRadius: BorderRadius.circular(999),
+                    borderRadius: BorderRadius.circular(AppUiRadius.pill),
                   ),
                 ),
               );
             }),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: AppUiSpacing.section),
           Text(title, style: theme.textTheme.headlineSmall),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppUiSpacing.sm),
           Text(description, style: theme.textTheme.bodyMedium),
           if (tags.isNotEmpty) ...[
-            const SizedBox(height: 16),
+            const SizedBox(height: AppUiSpacing.xxl),
             Wrap(
-              spacing: 8,
-              runSpacing: 8,
+              spacing: AppUiSpacing.sm,
+              runSpacing: AppUiSpacing.sm,
               children: tags
                   .map(
                     (tag) => PscInfoPill(
@@ -260,10 +270,10 @@ class PscBulletLine extends StatelessWidget {
       children: [
         Icon(
           icon ?? Icons.done_rounded,
-          size: 16,
+          size: AppUiSize.iconSm,
           color: theme.colorScheme.primary,
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: AppUiSpacing.md),
         Expanded(child: Text(label, style: theme.textTheme.bodySmall)),
       ],
     );
@@ -298,7 +308,7 @@ class PscRuleSectionCard extends StatelessWidget {
 
     return PscSurfaceCard(
       onTap: onTap,
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(AppUiSpacing.section),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -315,16 +325,16 @@ class PscRuleSectionCard extends StatelessWidget {
               if (onTap != null)
                 Icon(
                   Icons.arrow_outward_rounded,
-                  size: 18,
+                  size: AppUiSize.iconMd,
                   color: theme.colorScheme.primary,
                 ),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: AppUiSpacing.xl),
           Text(title, style: theme.textTheme.titleLarge),
-          const SizedBox(height: 6),
+          const SizedBox(height: AppUiSpacing.xs),
           Text(description, style: theme.textTheme.bodyMedium),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppUiSpacing.lg),
           Text(
             hint,
             style: theme.textTheme.labelMedium?.copyWith(
@@ -360,7 +370,10 @@ class PscStateRowCard extends StatelessWidget {
 
     return PscSurfaceCard(
       onTap: onTap,
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppUiSpacing.section,
+        vertical: AppUiSpacing.xxl,
+      ),
       child: Row(
         children: [
           Expanded(
@@ -373,7 +386,7 @@ class PscStateRowCard extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: AppUiSpacing.lg),
           Flexible(
             child: Text(
               value,
@@ -410,12 +423,19 @@ class PscStatusBanner extends StatelessWidget {
     return PscSurfaceCard(
       backgroundColor: color.withValues(alpha: 0.08),
       borderColor: color.withValues(alpha: 0.35),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppUiSpacing.xxl,
+        vertical: AppUiSpacing.xl,
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.info_outline_rounded, color: color, size: 18),
-          const SizedBox(width: 10),
+          Icon(
+            Icons.info_outline_rounded,
+            color: color,
+            size: AppUiSize.iconMd,
+          ),
+          const SizedBox(width: AppUiSpacing.md),
           Expanded(
             child: Text(
               message,
@@ -458,8 +478,8 @@ class PscDigestCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Wrap(
-            spacing: 8,
-            runSpacing: 8,
+            spacing: AppUiSpacing.sm,
+            runSpacing: AppUiSpacing.sm,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               const PscInfoPill(
@@ -467,14 +487,17 @@ class PscDigestCard extends StatelessWidget {
                 icon: Icons.menu_book_outlined,
               ),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 2,
+                  vertical: AppUiSpacing.sm,
+                ),
                 child: Text(freshness, style: theme.textTheme.labelMedium),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppUiSpacing.xxl),
           Text(topic, style: theme.textTheme.titleLarge),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppUiSpacing.sm),
           Text(
             whyReason,
             style: theme.textTheme.bodySmall?.copyWith(
@@ -482,9 +505,9 @@ class PscDigestCard extends StatelessWidget {
               fontWeight: FontWeight.w700,
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppUiSpacing.lg),
           Text(summary, style: theme.textTheme.bodyMedium),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppUiSpacing.xxl),
           PscInfoPill(
             label: sourceMix,
             icon: Icons.link_outlined,

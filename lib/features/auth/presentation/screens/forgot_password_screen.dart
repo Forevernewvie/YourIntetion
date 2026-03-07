@@ -3,11 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_router.dart';
-import '../../../../core/error/app_failure.dart';
+import '../../../../core/constants/app_constants.dart';
+import '../../../../core/logging/app_logger.dart';
 import '../../../../shared/layout/psc_adaptive_scroll_body.dart';
 import '../../../../shared/layout/psc_page_scaffold.dart';
 import '../../../../shared/widgets/psc_blocks.dart';
+import '../presenters/auth_error_presenter.dart';
 import '../providers/auth_providers.dart';
+import '../validation/auth_input_validator.dart';
+import '../widgets/auth_support_widgets.dart';
 
 /// Purpose: Collect account email and trigger password reset mail flow.
 class ForgotPasswordScreen extends ConsumerStatefulWidget {
@@ -54,13 +58,18 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
       setState(() {
         _isSubmitting = false;
         _isErrorStatus = false;
-        _statusMessage =
-            'If this account exists, reset instructions were sent to your email.';
+        _statusMessage = AppAuthMessage.passwordResetRequestSubmitted;
       });
-    } catch (error) {
-      final failureMessage = error is AppFailure
-          ? error.message
-          : 'Unable to request password reset. Please retry.';
+    } catch (error, stackTrace) {
+      AppLogger.error(
+        'auth_password_reset_request_failed',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      final failureMessage = AuthErrorPresenter.present(
+        error,
+        fallbackMessage: AppAuthMessage.passwordResetRequestFailed,
+      );
       setState(() {
         _isSubmitting = false;
         _isErrorStatus = true;
@@ -96,13 +105,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                   labelText: 'Email',
                   hintText: 'you@example.com',
                 ),
-                validator: (value) {
-                  final input = (value ?? '').trim();
-                  if (input.isEmpty || !input.contains('@')) {
-                    return 'Enter a valid email address.';
-                  }
-                  return null;
-                },
+                validator: AuthInputValidator.validateEmail,
               ),
               if (_statusMessage != null) ...[
                 const SizedBox(height: 12),
@@ -116,13 +119,10 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
               const Spacer(),
               FilledButton(
                 onPressed: _isSubmitting ? null : _submit,
-                child: _isSubmitting
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Send Reset Link'),
+                child: AuthSubmitButtonChild(
+                  isLoading: _isSubmitting,
+                  label: 'Send Reset Link',
+                ),
               ),
               const SizedBox(height: 8),
               OutlinedButton(

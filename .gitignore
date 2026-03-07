@@ -47,5 +47,6 @@ app.*.map.json
 
 # Environment and local runtime artifacts
 .env
+.codex/
 backend/pocketbase/pb_data/
 backend/pocketbase/pocketbase

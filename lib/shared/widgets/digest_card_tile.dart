@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/constants/app_constants.dart';
 import '../../features/digest/domain/entities/digest_item.dart';
 import 'psc_blocks.dart';
 
@@ -18,7 +19,7 @@ class DigestCardTile extends StatelessWidget {
 
     return PscSurfaceCard(
       onTap: onTap,
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(AppUiSpacing.section),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -35,21 +36,21 @@ class DigestCardTile extends StatelessWidget {
               const Spacer(),
               Icon(
                 Icons.arrow_outward_rounded,
-                size: 18,
+                size: AppUiSize.iconMd,
                 color: theme.colorScheme.primary,
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: AppUiSpacing.xxl),
           Text(item.topic, style: theme.textTheme.titleLarge),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppUiSpacing.sm),
           Text(
             item.summary,
             maxLines: 3,
             overflow: TextOverflow.ellipsis,
             style: theme.textTheme.bodyMedium,
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppUiSpacing.lg),
           Text(
             item.whyReason,
             maxLines: 2,
@@ -59,10 +60,10 @@ class DigestCardTile extends StatelessWidget {
               fontWeight: FontWeight.w700,
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: AppUiSpacing.xl),
           Wrap(
-            spacing: 8,
-            runSpacing: 8,
+            spacing: AppUiSpacing.sm,
+            runSpacing: AppUiSpacing.sm,
             children: [
               PscInfoPill(
                 label: '${item.citations.length} traceable sources',

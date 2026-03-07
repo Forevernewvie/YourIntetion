@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/constants/app_constants.dart';
+import '../../../../shared/feedback/app_feedback_messenger.dart';
 import '../../../../shared/layout/psc_page_scaffold.dart';
 import '../../../../shared/widgets/psc_blocks.dart';
 import '../../../../shared/widgets/psc_bottom_nav.dart';
@@ -109,8 +111,10 @@ class _NotificationPreferencesScreenState
           const SizedBox(height: 14),
           OutlinedButton(
             onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Permission check requested.')),
+              AppFeedbackMessenger.showInfo(
+                context,
+                message: AppFeedbackMessage.notificationPermissionRequested,
+                event: 'notification_permission_retry_requested',
               );
             },
             child: const Text('Retry Permission'),
@@ -118,8 +122,14 @@ class _NotificationPreferencesScreenState
           const SizedBox(height: 8),
           FilledButton(
             onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Notification rules saved.')),
+              AppFeedbackMessenger.showSuccess(
+                context,
+                message: AppFeedbackMessage.notificationRulesSaved,
+                event: 'notification_rules_saved',
+                fields: {
+                  'morningDigestEnabled': _morningDigest,
+                  'breakingAlertsEnabled': _breakingChanges,
+                },
               );
             },
             child: const Text('Save Notification Rules'),
