@@ -3,11 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_router.dart';
-import '../../../../core/error/app_failure.dart';
+import '../../../../core/constants/app_constants.dart';
 import '../../../../shared/layout/psc_adaptive_scroll_body.dart';
 import '../../../../shared/layout/psc_page_scaffold.dart';
 import '../../../../shared/widgets/psc_blocks.dart';
+import '../presenters/auth_error_presenter.dart';
 import '../providers/auth_providers.dart';
+import '../validation/auth_input_validator.dart';
+import '../widgets/auth_support_widgets.dart';
 
 /// Purpose: Render account registration form for first-time users.
 class SignUpScreen extends ConsumerStatefulWidget {
@@ -61,7 +64,10 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
     final isLoading = authState.isLoading;
     final theme = Theme.of(context);
     final errorMessage = authState.hasError
-        ? _errorMessage(authState.error)
+        ? AuthErrorPresenter.present(
+            authState.error,
+            fallbackMessage: AppAuthMessage.accountCreationFailedRetry,
+          )
         : null;
 
     return PscPageScaffold(
@@ -73,27 +79,11 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              PscSurfaceCard(
-                emphasize: true,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const PscInfoPill(
-                      label: 'Start With Trust',
-                      icon: Icons.verified_user_outlined,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Build a digest profile that can explain itself.',
-                      style: theme.textTheme.headlineSmall,
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      'Create your account first. After email verification you will set the topics, sources, and cadence that shape every brief.',
-                      style: theme.textTheme.bodyMedium,
-                    ),
-                  ],
-                ),
+              const AuthHeroCard(
+                eyebrow: 'Start With Trust',
+                title: 'Build a digest profile that can explain itself.',
+                description:
+                    'Create your account first. After email verification you will set the topics, sources, and cadence that shape every brief.',
               ),
               const SizedBox(height: 16),
               PscSurfaceCard(
@@ -105,13 +95,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                     TextFormField(
                       controller: _nameController,
                       decoration: const InputDecoration(labelText: 'Name'),
-                      validator: (value) {
-                        final input = (value ?? '').trim();
-                        if (input.isEmpty) {
-                          return 'Name is required.';
-                        }
-                        return null;
-                      },
+                      validator: AuthInputValidator.validateName,
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
@@ -122,54 +106,31 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                         labelText: 'Email',
                         hintText: 'you@example.com',
                       ),
-                      validator: (value) {
-                        final input = (value ?? '').trim();
-                        if (input.isEmpty || !input.contains('@')) {
-                          return 'Enter a valid email address.';
-                        }
-                        return null;
-                      },
+                      validator: AuthInputValidator.validateEmail,
                     ),
                     const SizedBox(height: 12),
-                    TextFormField(
+                    AuthPasswordField(
                       controller: _passwordController,
+                      label: 'Password',
                       obscureText: _obscurePassword,
-                      autocorrect: false,
-                      decoration: InputDecoration(
-                        labelText: 'Password',
-                        suffixIcon: IconButton(
-                          onPressed: () => setState(() {
-                            _obscurePassword = !_obscurePassword;
-                          }),
-                          icon: Icon(
-                            _obscurePassword
-                                ? Icons.visibility_outlined
-                                : Icons.visibility_off_outlined,
-                          ),
-                        ),
-                      ),
-                      validator: (value) {
-                        final input = value ?? '';
-                        if (input.length < 8) {
-                          return 'Password must be at least 8 characters.';
-                        }
-                        return null;
-                      },
+                      onToggleVisibility: () => setState(() {
+                        _obscurePassword = !_obscurePassword;
+                      }),
+                      validator: AuthInputValidator.validatePassword,
                     ),
                     const SizedBox(height: 12),
-                    TextFormField(
+                    AuthPasswordField(
                       controller: _confirmController,
+                      label: 'Confirm Password',
                       obscureText: _obscurePassword,
-                      autocorrect: false,
-                      decoration: const InputDecoration(
-                        labelText: 'Confirm Password',
-                      ),
-                      validator: (value) {
-                        if ((value ?? '') != _passwordController.text) {
-                          return 'Password confirmation does not match.';
-                        }
-                        return null;
-                      },
+                      onToggleVisibility: () => setState(() {
+                        _obscurePassword = !_obscurePassword;
+                      }),
+                      validator: (value) =>
+                          AuthInputValidator.validatePasswordConfirmation(
+                            value,
+                            password: _passwordController.text,
+                          ),
                     ),
                     if (errorMessage != null) ...[
                       const SizedBox(height: 12),
@@ -181,13 +142,10 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                     const SizedBox(height: 16),
                     FilledButton(
                       onPressed: isLoading ? null : _submit,
-                      child: isLoading
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Text('Create Account'),
+                      child: AuthSubmitButtonChild(
+                        isLoading: isLoading,
+                        label: 'Create Account',
+                      ),
                     ),
                     const SizedBox(height: 8),
                     OutlinedButton(
@@ -204,13 +162,5 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
         ),
       ),
     );
-  }
-
-  /// Purpose: Convert auth state error to concise and user-friendly text.
-  String _errorMessage(Object? error) {
-    if (error is AppFailure) {
-      return error.message;
-    }
-    return 'Account creation failed. Please retry.';
   }
 }

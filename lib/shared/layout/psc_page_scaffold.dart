@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/constants/app_constants.dart';
 import '../widgets/psc_blocks.dart';
 
 /// Purpose: Standardized page scaffold for consistent title, spacing and bottom navigation.
@@ -37,13 +38,18 @@ class PscPageScaffold extends StatelessWidget {
         ),
         child: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            padding: const EdgeInsets.fromLTRB(
+              AppUiSpacing.xxl,
+              AppUiSpacing.lg,
+              AppUiSpacing.xxl,
+              0,
+            ),
             child: Column(
               children: [
                 PscSurfaceCard(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 18,
-                    vertical: 16,
+                    horizontal: AppUiSpacing.section,
+                    vertical: AppUiSpacing.xxl,
                   ),
                   child: Row(
                     children: [
@@ -52,12 +58,12 @@ class PscPageScaffold extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'VibeCodingExpert',
+                              AppMetadata.productName,
                               style: theme.textTheme.labelMedium?.copyWith(
                                 color: theme.colorScheme.primary,
                               ),
                             ),
-                            const SizedBox(height: 4),
+                            const SizedBox(height: AppUiSpacing.xxs),
                             Text(
                               title,
                               maxLines: 2,
@@ -68,13 +74,13 @@ class PscPageScaffold extends StatelessWidget {
                         ),
                       ),
                       Container(
-                        width: 42,
-                        height: 42,
+                        width: AppUiSize.controlLg,
+                        height: AppUiSize.controlLg,
                         decoration: BoxDecoration(
                           color: theme.colorScheme.primary.withValues(
                             alpha: 0.12,
                           ),
-                          borderRadius: BorderRadius.circular(14),
+                          borderRadius: BorderRadius.circular(AppUiRadius.md),
                         ),
                         child: Icon(
                           Icons.auto_stories_outlined,
@@ -84,7 +90,7 @@ class PscPageScaffold extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: AppUiSpacing.section),
                 Expanded(child: body),
               ],
             ),

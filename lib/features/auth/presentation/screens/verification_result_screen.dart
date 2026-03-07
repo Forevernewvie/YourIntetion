@@ -3,11 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_router.dart';
-import '../../../../core/error/app_failure.dart';
+import '../../../../core/constants/app_constants.dart';
+import '../../../../core/logging/app_logger.dart';
 import '../../../../shared/layout/psc_adaptive_scroll_body.dart';
 import '../../../../shared/layout/psc_page_scaffold.dart';
 import '../../../../shared/widgets/psc_blocks.dart';
+import '../presenters/auth_error_presenter.dart';
 import '../providers/auth_providers.dart';
+import '../widgets/auth_support_widgets.dart';
 
 /// Purpose: Resolve verification token links and present success/failure outcome.
 class VerificationResultScreen extends ConsumerStatefulWidget {
@@ -43,7 +46,7 @@ class _VerificationResultScreenState
       setState(() {
         _isLoading = false;
         _isSuccess = false;
-        _message = 'Verification link is missing a token.';
+        _message = AppAuthMessage.verificationTokenMissing;
       });
       return;
     }
@@ -55,12 +58,18 @@ class _VerificationResultScreenState
       setState(() {
         _isLoading = false;
         _isSuccess = true;
-        _message = 'Email verified successfully. You can continue setup.';
+        _message = AppAuthMessage.verificationSucceeded;
       });
-    } catch (error) {
-      final failureMessage = error is AppFailure
-          ? error.message
-          : 'Verification link is invalid or expired.';
+    } catch (error, stackTrace) {
+      AppLogger.error(
+        'auth_verification_token_resolution_failed',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      final failureMessage = AuthErrorPresenter.present(
+        error,
+        fallbackMessage: AppAuthMessage.verificationInvalidOrExpired,
+      );
       setState(() {
         _isLoading = false;
         _isSuccess = false;
@@ -83,6 +92,17 @@ class _VerificationResultScreenState
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  AuthHeroCard(
+                    eyebrow: _isSuccess
+                        ? 'Verification Complete'
+                        : 'Verification Review',
+                    title: _isSuccess
+                        ? 'Your account is ready for guided setup.'
+                        : 'This verification link could not be completed.',
+                    description: _isSuccess
+                        ? 'Email trust has been confirmed. You can continue to topic and source setup now.'
+                        : 'Try the verification flow again or request a fresh email link before continuing.',
+                  ),
                   const SizedBox(height: 12),
                   Icon(
                     _isSuccess
@@ -93,16 +113,6 @@ class _VerificationResultScreenState
                         ? theme.colorScheme.primary
                         : theme.colorScheme.error,
                   ),
-                  const SizedBox(height: 12),
-                  Text(
-                    _isSuccess
-                        ? 'Verification Complete'
-                        : 'Verification Failed',
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
                   PscStatusBanner(
                     message: _message,
                     color: _isSuccess
@@ -116,8 +126,11 @@ class _VerificationResultScreenState
                           ? AppRoutePath.welcome
                           : AppRoutePath.verifyPending,
                     ),
-                    child: Text(
-                      _isSuccess ? 'Continue Setup' : 'Back to Verification',
+                    child: AuthSubmitButtonChild(
+                      isLoading: false,
+                      label: _isSuccess
+                          ? 'Continue Setup'
+                          : 'Back to Verification',
                     ),
                   ),
                 ],

@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:developer' as developer;
 
+import '../constants/app_constants.dart';
+
 /// Purpose: Provide structured JSON logging with basic sensitive-field redaction.
 final class AppLogger {
   AppLogger._();
@@ -44,7 +46,7 @@ final class AppLogger {
       if (stackTrace != null) 'stackTrace': stackTrace.toString(),
     };
 
-    developer.log(jsonEncode(payload), name: 'psc');
+    developer.log(jsonEncode(payload), name: AppMetadata.loggerName);
   }
 
   /// Purpose: Redact known sensitive keys before logging.

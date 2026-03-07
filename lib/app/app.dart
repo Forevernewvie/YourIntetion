@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/constants/app_constants.dart';
 import '../core/logging/app_logger.dart';
 import 'router/app_router.dart';
 import 'theme/app_theme.dart';
@@ -18,7 +19,7 @@ class PreferenceSummaryCuratorApp extends ConsumerWidget {
 
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
-      title: 'Preference Summary Curator',
+      title: AppMetadata.windowTitle,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.system,

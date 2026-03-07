@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/router/app_router.dart';
+import '../../core/constants/app_constants.dart';
 
 /// Purpose: Provide custom bottom navigation aligned with the editorial design language.
 class PscBottomNav extends StatelessWidget {
@@ -26,17 +27,22 @@ class PscBottomNav extends StatelessWidget {
     return SafeArea(
       top: false,
       child: Container(
-        margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-        padding: const EdgeInsets.all(8),
+        margin: const EdgeInsets.fromLTRB(
+          AppUiSpacing.xxl,
+          0,
+          AppUiSpacing.xxl,
+          AppUiSpacing.lg,
+        ),
+        padding: const EdgeInsets.all(AppUiSpacing.sm),
         decoration: BoxDecoration(
           color: theme.cardTheme.color ?? theme.colorScheme.surface,
-          borderRadius: BorderRadius.circular(26),
+          borderRadius: BorderRadius.circular(AppUiRadius.nav),
           border: Border.all(color: theme.dividerColor.withValues(alpha: 0.7)),
           boxShadow: [
             BoxShadow(
               color: theme.shadowColor.withValues(alpha: 0.12),
-              blurRadius: 24,
-              offset: const Offset(0, 10),
+              blurRadius: AppUiSpacing.page,
+              offset: const Offset(0, AppUiSpacing.md),
             ),
           ],
         ),
@@ -46,28 +52,30 @@ class PscBottomNav extends StatelessWidget {
             return Expanded(
               child: InkWell(
                 onTap: () => _onSelect(context, index),
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(AppUiRadius.xl),
                 child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
+                  duration: AppUiDuration.fast,
                   curve: Curves.easeOutCubic,
-                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: AppUiSpacing.md,
+                  ),
                   decoration: BoxDecoration(
                     color: selected
                         ? theme.colorScheme.primary.withValues(alpha: 0.14)
                         : Colors.transparent,
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(AppUiRadius.xl),
                   ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
                         _icons[index],
-                        size: 20,
+                        size: AppUiSize.iconLg,
                         color: selected
                             ? theme.colorScheme.primary
                             : theme.textTheme.labelSmall?.color,
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: AppUiSpacing.xxs),
                       Text(
                         _labels[index],
                         maxLines: 1,

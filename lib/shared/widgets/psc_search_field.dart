@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../core/constants/app_constants.dart';
+
 /// Purpose: Provide a compact search field matching the editorial app style.
 class PscSearchField extends StatelessWidget {
   /// Purpose: Construct search field with optional callback.
@@ -18,8 +20,10 @@ class PscSearchField extends StatelessWidget {
       style: theme.textTheme.bodyMedium,
       decoration: InputDecoration(
         hintText: hintText ?? 'Search topics or sources',
-        prefixIcon: const Icon(Icons.search_rounded, size: 18),
-        prefixIconConstraints: const BoxConstraints(minWidth: 48),
+        prefixIcon: const Icon(Icons.search_rounded, size: AppUiSize.iconMd),
+        prefixIconConstraints: const BoxConstraints(
+          minWidth: AppUiSize.searchFieldMinWidth,
+        ),
         filled: true,
         fillColor: theme.cardTheme.color ?? theme.colorScheme.surface,
       ),

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/constants/app_constants.dart';
 import '../../../../features/digest/domain/entities/citation.dart';
 import '../../../../features/digest/domain/entities/digest_item.dart';
 import '../../../../features/digest/domain/entities/feedback_event.dart';
 import '../../../../features/digest/presentation/providers/digest_providers.dart';
+import '../../../../shared/feedback/app_feedback_messenger.dart';
 import '../../../../shared/layout/psc_page_scaffold.dart';
 import '../../../../shared/widgets/digest_card_tile.dart';
 import '../../../../shared/widgets/psc_blocks.dart';
@@ -109,9 +111,12 @@ class FeedbackTuningScreen extends ConsumerWidget {
 
     await ref.read(submitFeedbackControllerProvider).submit(event);
     if (context.mounted) {
-      ScaffoldMessenger.of(
+      AppFeedbackMessenger.showSuccess(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Feedback submitted.')));
+        message: AppFeedbackMessage.feedbackSubmitted,
+        event: 'feedback_submitted',
+        fields: {'rating': rating, 'reason': reason},
+      );
     }
   }
 }

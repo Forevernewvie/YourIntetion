@@ -5,11 +5,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_router.dart';
-import '../../../../core/error/app_failure.dart';
+import '../../../../core/constants/app_constants.dart';
+import '../../../../core/logging/app_logger.dart';
 import '../../../../shared/layout/psc_adaptive_scroll_body.dart';
 import '../../../../shared/layout/psc_page_scaffold.dart';
 import '../../../../shared/widgets/psc_blocks.dart';
+import '../presenters/auth_error_presenter.dart';
 import '../providers/auth_providers.dart';
+import '../widgets/auth_support_widgets.dart';
 
 /// Purpose: Block unverified users and guide them through verification completion.
 class EmailVerificationPendingScreen extends ConsumerStatefulWidget {
@@ -25,8 +28,6 @@ class EmailVerificationPendingScreen extends ConsumerStatefulWidget {
 /// Purpose: Manage resend cooldown, verification refresh, and status feedback.
 class _EmailVerificationPendingScreenState
     extends ConsumerState<EmailVerificationPendingScreen> {
-  static const _resendCooldownSeconds = 60;
-
   Timer? _cooldownTimer;
   int _remainingSeconds = 0;
   String? _statusMessage;
@@ -44,9 +45,9 @@ class _EmailVerificationPendingScreenState
     final session = ref.read(authControllerProvider).valueOrNull;
     final email = session?.email ?? '';
     if (email.isEmpty) {
+      AppLogger.warn('auth_verification_resend_missing_email');
       setState(() {
-        _statusMessage =
-            'Unable to determine account email. Please sign in again.';
+        _statusMessage = AppAuthMessage.verificationEmailMissing;
         _isErrorStatus = true;
       });
       return;
@@ -58,13 +59,19 @@ class _EmailVerificationPendingScreenState
           .resendVerification(email: email);
       _startCooldown();
       setState(() {
-        _statusMessage = 'Verification email sent. Please check your inbox.';
+        _statusMessage = AppAuthMessage.verificationEmailSent;
         _isErrorStatus = false;
       });
-    } catch (error) {
-      final message = error is AppFailure
-          ? error.message
-          : 'Unable to send verification email. Please retry.';
+    } catch (error, stackTrace) {
+      AppLogger.error(
+        'auth_verification_resend_failed',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      final message = AuthErrorPresenter.present(
+        error,
+        fallbackMessage: AppAuthMessage.verificationSendFailed,
+      );
       setState(() {
         _statusMessage = message;
         _isErrorStatus = true;
@@ -85,14 +92,19 @@ class _EmailVerificationPendingScreenState
         return;
       }
       setState(() {
-        _statusMessage =
-            'Verification is still pending. Please verify and retry.';
+        _statusMessage = AppAuthMessage.verificationStillPending;
         _isErrorStatus = true;
       });
-    } catch (error) {
-      final message = error is AppFailure
-          ? error.message
-          : 'Failed to refresh verification status.';
+    } catch (error, stackTrace) {
+      AppLogger.error(
+        'auth_verification_refresh_failed',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      final message = AuthErrorPresenter.present(
+        error,
+        fallbackMessage: AppAuthMessage.verificationStatusRefreshFailed,
+      );
       setState(() {
         _statusMessage = message;
         _isErrorStatus = true;
@@ -104,9 +116,9 @@ class _EmailVerificationPendingScreenState
   void _startCooldown() {
     _cooldownTimer?.cancel();
     setState(() {
-      _remainingSeconds = _resendCooldownSeconds;
+      _remainingSeconds = AppAuthPolicy.resendCooldownSeconds;
     });
-    _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+    _cooldownTimer = Timer.periodic(AppUiDuration.oneSecond, (timer) {
       if (!mounted) {
         timer.cancel();
         return;
@@ -169,7 +181,10 @@ class _EmailVerificationPendingScreenState
             ],
             FilledButton(
               onPressed: _iHaveVerified,
-              child: const Text("I've Verified My Email"),
+              child: const AuthSubmitButtonChild(
+                isLoading: false,
+                label: "I've Verified My Email",
+              ),
             ),
             const SizedBox(height: 8),
             OutlinedButton(

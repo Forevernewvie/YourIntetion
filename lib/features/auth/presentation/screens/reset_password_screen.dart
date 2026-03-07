@@ -3,11 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_router.dart';
-import '../../../../core/error/app_failure.dart';
+import '../../../../core/constants/app_constants.dart';
+import '../../../../core/logging/app_logger.dart';
 import '../../../../shared/layout/psc_adaptive_scroll_body.dart';
 import '../../../../shared/layout/psc_page_scaffold.dart';
 import '../../../../shared/widgets/psc_blocks.dart';
+import '../presenters/auth_error_presenter.dart';
 import '../providers/auth_providers.dart';
+import '../validation/auth_input_validator.dart';
+import '../widgets/auth_support_widgets.dart';
 
 /// Purpose: Validate reset token and set a new password for account recovery.
 class ResetPasswordScreen extends ConsumerStatefulWidget {
@@ -71,13 +75,18 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
       setState(() {
         _isSubmitting = false;
         _isErrorStatus = false;
-        _statusMessage =
-            'Password reset complete. Please sign in with your new password.';
+        _statusMessage = AppAuthMessage.passwordResetComplete;
       });
-    } catch (error) {
-      final failureMessage = error is AppFailure
-          ? error.message
-          : 'Unable to reset password. Please retry.';
+    } catch (error, stackTrace) {
+      AppLogger.error(
+        'auth_password_reset_confirm_failed',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      final failureMessage = AuthErrorPresenter.present(
+        error,
+        fallbackMessage: AppAuthMessage.passwordResetFailed,
+      );
       setState(() {
         _isSubmitting = false;
         _isErrorStatus = true;
@@ -109,54 +118,31 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                 controller: _tokenController,
                 autocorrect: false,
                 decoration: const InputDecoration(labelText: 'Reset Token'),
-                validator: (value) {
-                  final input = (value ?? '').trim();
-                  if (input.isEmpty) {
-                    return 'Reset token is required.';
-                  }
-                  return null;
-                },
+                validator: AuthInputValidator.validateResetToken,
               ),
               const SizedBox(height: 12),
-              TextFormField(
+              AuthPasswordField(
                 controller: _passwordController,
+                label: 'New Password',
                 obscureText: _obscurePassword,
-                autocorrect: false,
-                decoration: InputDecoration(
-                  labelText: 'New Password',
-                  suffixIcon: IconButton(
-                    onPressed: () => setState(() {
-                      _obscurePassword = !_obscurePassword;
-                    }),
-                    icon: Icon(
-                      _obscurePassword
-                          ? Icons.visibility_outlined
-                          : Icons.visibility_off_outlined,
-                    ),
-                  ),
-                ),
-                validator: (value) {
-                  final input = value ?? '';
-                  if (input.length < 8) {
-                    return 'Password must be at least 8 characters.';
-                  }
-                  return null;
-                },
+                onToggleVisibility: () => setState(() {
+                  _obscurePassword = !_obscurePassword;
+                }),
+                validator: AuthInputValidator.validatePassword,
               ),
               const SizedBox(height: 12),
-              TextFormField(
+              AuthPasswordField(
                 controller: _confirmController,
+                label: 'Confirm Password',
                 obscureText: _obscurePassword,
-                autocorrect: false,
-                decoration: const InputDecoration(
-                  labelText: 'Confirm Password',
-                ),
-                validator: (value) {
-                  if ((value ?? '') != _passwordController.text) {
-                    return 'Password confirmation does not match.';
-                  }
-                  return null;
-                },
+                onToggleVisibility: () => setState(() {
+                  _obscurePassword = !_obscurePassword;
+                }),
+                validator: (value) =>
+                    AuthInputValidator.validatePasswordConfirmation(
+                      value,
+                      password: _passwordController.text,
+                    ),
               ),
               if (_statusMessage != null) ...[
                 const SizedBox(height: 12),
@@ -170,13 +156,10 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
               const Spacer(),
               FilledButton(
                 onPressed: _isSubmitting ? null : _submit,
-                child: _isSubmitting
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Reset Password'),
+                child: AuthSubmitButtonChild(
+                  isLoading: _isSubmitting,
+                  label: 'Reset Password',
+                ),
               ),
               const SizedBox(height: 8),
               OutlinedButton(
