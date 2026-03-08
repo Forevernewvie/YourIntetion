@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 
+import '../../../../core/constants/app_constants.dart';
 import '../../../../core/error/app_failure.dart';
 import '../../../../core/logging/app_logger.dart';
 import '../../../../core/network/dio_failure_mapper.dart';
@@ -19,8 +20,6 @@ final class AuthRepositoryImpl implements AuthRepository {
 
   final AuthRemoteDataSource _remote;
   final AuthLocalDataSource _local;
-  static const String _authTimeoutMessage =
-      'Network timeout while authenticating.';
 
   /// Purpose: Authenticate existing user and persist resulting session.
   @override
@@ -28,24 +27,21 @@ final class AuthRepositoryImpl implements AuthRepository {
     required String email,
     required String password,
   }) async {
-    AppLogger.info('auth_sign_in_requested');
+    AppLogger.info(AppAuthLogEvent.signInRequested);
     try {
       final session = await _remote.signIn(email: email, password: password);
       await _local.saveSession(session);
       AppLogger.info(
-        'auth_sign_in_succeeded',
+        AppAuthLogEvent.signInSucceeded,
         fields: {'userId': session.userId},
       );
       return session;
     } on DioException catch (error) {
       AppLogger.warn(
-        'auth_sign_in_failed',
+        AppAuthLogEvent.signInFailed,
         fields: {'statusCode': error.response?.statusCode},
       );
-      throw _mapDioFailure(
-        error,
-        fallbackMessage: 'Failed to sign in. Please check your credentials.',
-      );
+      throw _mapDioFailure(error, fallbackMessage: AppAuthMessage.signInFailed);
     }
   }
 
@@ -56,25 +52,22 @@ final class AuthRepositoryImpl implements AuthRepository {
     required String password,
     required String name,
   }) async {
-    AppLogger.info('auth_sign_up_requested');
+    AppLogger.info(AppAuthLogEvent.signUpRequested);
     try {
       await _remote.signUp(email: email, password: password, name: name);
       final session = await _remote.signIn(email: email, password: password);
       await _local.saveSession(session);
       AppLogger.info(
-        'auth_sign_up_succeeded',
+        AppAuthLogEvent.signUpSucceeded,
         fields: {'userId': session.userId},
       );
       return session;
     } on DioException catch (error) {
       AppLogger.warn(
-        'auth_sign_up_failed',
+        AppAuthLogEvent.signUpFailed,
         fields: {'statusCode': error.response?.statusCode},
       );
-      throw _mapDioFailure(
-        error,
-        fallbackMessage: 'Failed to create account. Please retry.',
-      );
+      throw _mapDioFailure(error, fallbackMessage: AppAuthMessage.signUpFailed);
     }
   }
 
@@ -86,7 +79,7 @@ final class AuthRepositoryImpl implements AuthRepository {
     } on DioException catch (error) {
       throw _mapDioFailure(
         error,
-        fallbackMessage: 'Unable to send verification email. Please retry.',
+        fallbackMessage: AppAuthMessage.verificationSendFailed,
       );
     }
   }
@@ -99,7 +92,7 @@ final class AuthRepositoryImpl implements AuthRepository {
     } on DioException catch (error) {
       throw _mapDioFailure(
         error,
-        fallbackMessage: 'Verification link is invalid or expired.',
+        fallbackMessage: AppAuthMessage.verificationInvalidOrExpired,
       );
     }
   }
@@ -112,8 +105,7 @@ final class AuthRepositoryImpl implements AuthRepository {
     } on DioException catch (error) {
       throw _mapDioFailure(
         error,
-        fallbackMessage:
-            'If the account exists, password reset instructions were sent.',
+        fallbackMessage: AppAuthMessage.passwordResetRequestSubmitted,
       );
     }
   }
@@ -129,7 +121,7 @@ final class AuthRepositoryImpl implements AuthRepository {
     } on DioException catch (error) {
       throw _mapDioFailure(
         error,
-        fallbackMessage: 'Reset link is invalid or expired.',
+        fallbackMessage: AppAuthMessage.passwordResetInvalidOrExpired,
       );
     }
   }
@@ -144,7 +136,7 @@ final class AuthRepositoryImpl implements AuthRepository {
     } on DioException catch (error) {
       throw _mapDioFailure(
         error,
-        fallbackMessage: 'Unable to refresh session.',
+        fallbackMessage: AppAuthMessage.sessionRefreshFailed,
       );
     }
   }
@@ -170,9 +162,9 @@ final class AuthRepositoryImpl implements AuthRepository {
       error,
       messages: DioFailureMessages(
         fallbackMessage: fallbackMessage,
-        timeoutMessage: _authTimeoutMessage,
-        unauthorizedMessage: 'Authentication failed.',
-        tooManyRequestsMessage: 'Too many requests. Please wait and try again.',
+        timeoutMessage: AppAuthMessage.authTimeout,
+        unauthorizedMessage: AppAuthMessage.authUnauthorized,
+        tooManyRequestsMessage: AppAuthMessage.authTooManyRequests,
       ),
     );
   }
