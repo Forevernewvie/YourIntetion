@@ -20,6 +20,15 @@ abstract final class AppMetadata {
   static const loggerName = 'psc';
 }
 
+/// Purpose: Centralize public legal URLs so policy links stay consistent across app surfaces.
+abstract final class AppLegalUrl {
+  static const privacyPolicy =
+      'https://forevernewvie.github.io/YourIntetion/privacy-policy/';
+
+  /// Purpose: Parse the canonical privacy policy URL for link launching.
+  static Uri get privacyPolicyUri => Uri.parse(privacyPolicy);
+}
+
 /// Purpose: Centralize API host defaults so environment resolution stays testable.
 abstract final class AppNetworkDefaults {
   static const localPort = 8090;
