@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_router.dart';
+import '../../../../core/constants/app_constants.dart';
 import '../../../../shared/layout/psc_adaptive_scroll_body.dart';
 import '../../../../shared/layout/psc_page_scaffold.dart';
 import '../../../../shared/widgets/psc_blocks.dart';
+import '../copy/onboarding_ui_copy.dart';
 
 /// Purpose: Introduce product value and trust model before onboarding setup.
 class WelcomeScreen extends StatelessWidget {
@@ -17,7 +19,7 @@ class WelcomeScreen extends StatelessWidget {
     final theme = Theme.of(context);
 
     return PscPageScaffold(
-      title: 'Welcome',
+      title: OnboardingUiCopy.welcomeTitle,
       body: PscAdaptiveScrollBody(
         extraBottomPadding: 8,
         child: Column(
@@ -29,26 +31,26 @@ class WelcomeScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const PscInfoPill(
-                    label: 'Explainable AI Digest',
+                    label: OnboardingUiCopy.welcomeEyebrow,
                     icon: Icons.auto_awesome_outlined,
                   ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: AppUiSpacing.section),
                   Text(
-                    'A calmer brief, trained on your rules.',
+                    OnboardingUiCopy.welcomeHeadline,
                     style: theme.textTheme.headlineMedium,
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: AppUiSpacing.md),
                   Text(
-                    'Set a few preferences and this app will rank what matters, show why it surfaced, and attach the sources behind every summary.',
+                    OnboardingUiCopy.welcomeDescription,
                     style: theme.textTheme.bodyLarge,
                   ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: AppUiSpacing.section),
                   Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
+                    spacing: AppUiSpacing.sm,
+                    runSpacing: AppUiSpacing.sm,
                     children: [
                       PscInfoPill(
-                        label: 'Traceable citations',
+                        label: OnboardingUiCopy.welcomeSignalTraceable,
                         icon: Icons.link_outlined,
                         backgroundColor: theme.colorScheme.tertiary.withValues(
                           alpha: 0.1,
@@ -56,7 +58,7 @@ class WelcomeScreen extends StatelessWidget {
                         foregroundColor: theme.colorScheme.tertiary,
                       ),
                       PscInfoPill(
-                        label: 'Rule-first ranking',
+                        label: OnboardingUiCopy.welcomeSignalRules,
                         icon: Icons.tune_outlined,
                         backgroundColor: theme.colorScheme.secondary.withValues(
                           alpha: 0.16,
@@ -72,43 +74,39 @@ class WelcomeScreen extends StatelessWidget {
             PscSurfaceCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  PscSectionTitle('What You Will Set Up'),
-                  SizedBox(height: 14),
-                  PscBulletLine(
-                    label:
-                        'Choose a focused set of topics to guide the ranking order.',
-                    icon: Icons.interests_outlined,
-                  ),
-                  SizedBox(height: 10),
-                  PscBulletLine(
-                    label: 'Shape which source types earn trust in the feed.',
-                    icon: Icons.fact_check_outlined,
-                  ),
-                  SizedBox(height: 10),
-                  PscBulletLine(
-                    label:
-                        'Adjust tone and cadence before previewing your first brief.',
-                    icon: Icons.schedule_outlined,
-                  ),
+                children: [
+                  const PscSectionTitle(OnboardingUiCopy.setupSectionTitle),
+                  const SizedBox(height: 14),
+                  for (
+                    var index = 0;
+                    index < OnboardingUiCopy.welcomeSetupBullets.length;
+                    index++
+                  ) ...[
+                    PscBulletLine(
+                      label: OnboardingUiCopy.welcomeSetupBullets[index].label,
+                      icon: OnboardingUiCopy.welcomeSetupBullets[index].icon,
+                    ),
+                    if (index !=
+                        OnboardingUiCopy.welcomeSetupBullets.length - 1)
+                      const SizedBox(height: 10),
+                  ],
                 ],
               ),
             ),
             const SizedBox(height: 16),
             PscStatusBanner(
-              message:
-                  'Four short steps. You can revise everything later in the rules console.',
+              message: OnboardingUiCopy.setupStatusMessage,
               color: theme.colorScheme.primary,
             ),
             const SizedBox(height: 18),
             FilledButton(
               onPressed: () => context.go(AppRoutePath.onboardingTopics),
-              child: const Text('Start Personalizing'),
+              child: const Text(OnboardingUiCopy.startPersonalizingAction),
             ),
             const SizedBox(height: 8),
             OutlinedButton(
               onPressed: () => context.go(AppRoutePath.onboardingPreview),
-              child: const Text('Preview Sample Digest'),
+              child: const Text(OnboardingUiCopy.previewSampleDigestAction),
             ),
           ],
         ),

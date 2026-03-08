@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_router.dart';
+import '../../../../core/constants/app_constants.dart';
 import '../../../../shared/layout/psc_adaptive_scroll_body.dart';
 import '../../../../shared/layout/psc_page_scaffold.dart';
 import '../../../../shared/widgets/psc_blocks.dart';
 import '../../../../shared/widgets/psc_search_field.dart';
+import '../copy/onboarding_ui_copy.dart';
 
 /// Purpose: Collect user topic preferences for initial profile setup.
 class TopicSelectionScreen extends StatefulWidget {
@@ -19,32 +21,7 @@ class TopicSelectionScreen extends StatefulWidget {
 
 /// Purpose: Manage chip selection state for topics.
 class _TopicSelectionScreenState extends State<TopicSelectionScreen> {
-  static const _topics = <_TopicOption>[
-    _TopicOption(
-      title: 'AI Productivity',
-      priority: 'High',
-      description:
-          'Tools, workflows, and applied automation that reduce friction.',
-    ),
-    _TopicOption(
-      title: 'Product Strategy',
-      priority: 'Medium',
-      description:
-          'Signals on roadmap thinking, positioning, and product bets.',
-    ),
-    _TopicOption(
-      title: 'Creator Economy',
-      priority: 'Low',
-      description:
-          'Monetization shifts, audience strategy, and platform changes.',
-    ),
-  ];
-
-  final Set<String> _selected = {
-    'AI Productivity',
-    'Product Strategy',
-    'Creator Economy',
-  };
+  final Set<String> _selected = {...OnboardingUiCopy.defaultSelectedTopics};
 
   /// Purpose: Toggle selected state of a topic chip.
   void _toggleTopic(String topic) {
@@ -61,24 +38,23 @@ class _TopicSelectionScreenState extends State<TopicSelectionScreen> {
   @override
   Widget build(BuildContext context) {
     return PscPageScaffold(
-      title: 'Choose Topics',
+      title: OnboardingUiCopy.topicsTitle,
       body: PscAdaptiveScrollBody(
         extraBottomPadding: 8,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const PscStepHeader(
+            PscStepHeader(
               step: 1,
-              totalSteps: 4,
-              title: 'Train the brief around your real interests.',
-              description:
-                  'Pick a small set of focus areas. Higher-priority topics rise first, but you can adjust the ranking later.',
-              tags: ['Pick 3-8 topics', 'Priority shapes order'],
+              totalSteps: AppOnboardingPolicy.totalSteps,
+              title: OnboardingUiCopy.topicStep.title,
+              description: OnboardingUiCopy.topicStep.description,
+              tags: OnboardingUiCopy.topicStep.tags,
             ),
             const SizedBox(height: 16),
-            const PscSearchField(hintText: 'Search or add a topic signal'),
+            const PscSearchField(hintText: OnboardingUiCopy.topicSearchHint),
             const SizedBox(height: 16),
-            ..._topics.map((topic) {
+            ...OnboardingUiCopy.topicOptions.map((topic) {
               final selected = _selected.contains(topic.title);
               return Padding(
                 padding: const EdgeInsets.only(bottom: 10),
@@ -99,7 +75,7 @@ class _TopicSelectionScreenState extends State<TopicSelectionScreen> {
             }),
             const SizedBox(height: 6),
             PscInfoPill(
-              label: 'Selected ${_selected.length}/8 topics',
+              label: OnboardingUiCopy.selectedTopicsLabel(_selected.length),
               icon: Icons.checklist_rtl_outlined,
               foregroundColor: Theme.of(context).colorScheme.primary,
             ),
@@ -108,34 +84,20 @@ class _TopicSelectionScreenState extends State<TopicSelectionScreen> {
               onPressed: _selected.isEmpty
                   ? null
                   : () => context.go(AppRoutePath.onboardingSources),
-              child: const Text('Next: Sources'),
+              child: const Text(OnboardingUiCopy.nextSourcesAction),
             ),
             const SizedBox(height: 8),
             OutlinedButton(
               onPressed: () => context.go(AppRoutePath.welcome),
-              child: const Text('Back'),
+              child: const Text(OnboardingUiCopy.backAction),
             ),
             TextButton(
               onPressed: () => context.go(AppRoutePath.onboardingPreview),
-              child: const Text('Preview Sample Instead'),
+              child: const Text(OnboardingUiCopy.previewSampleInsteadAction),
             ),
           ],
         ),
       ),
     );
   }
-}
-
-/// Purpose: Represent a topic option shown in onboarding.
-class _TopicOption {
-  /// Purpose: Construct one topic option.
-  const _TopicOption({
-    required this.title,
-    required this.priority,
-    required this.description,
-  });
-
-  final String title;
-  final String priority;
-  final String description;
 }
