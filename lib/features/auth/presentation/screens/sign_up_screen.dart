@@ -7,6 +7,7 @@ import '../../../../core/constants/app_constants.dart';
 import '../../../../shared/layout/psc_adaptive_scroll_body.dart';
 import '../../../../shared/layout/psc_page_scaffold.dart';
 import '../../../../shared/widgets/psc_blocks.dart';
+import '../copy/auth_ui_copy.dart';
 import '../presenters/auth_error_presenter.dart';
 import '../providers/auth_providers.dart';
 import '../validation/auth_input_validator.dart';
@@ -71,7 +72,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
         : null;
 
     return PscPageScaffold(
-      title: 'Create Account',
+      title: AuthUiCopy.createAccountTitle,
       body: PscAdaptiveScrollBody(
         extraBottomPadding: 8,
         child: Form(
@@ -79,39 +80,21 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const AuthHeroCard(
-                eyebrow: 'Start With Trust',
-                title: 'Build a digest profile that can explain itself.',
-                description:
-                    'Create your account first. After email verification you will set the topics, sources, and cadence that shape every brief.',
-              ),
+              AuthHeroCard.fromContent(content: AuthUiCopy.signUpHero),
               const SizedBox(height: 16),
               PscSurfaceCard(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const PscSectionTitle('Account Details'),
+                    const PscSectionTitle(AuthUiCopy.accountDetailsSection),
                     const SizedBox(height: 14),
-                    TextFormField(
-                      controller: _nameController,
-                      decoration: const InputDecoration(labelText: 'Name'),
-                      validator: AuthInputValidator.validateName,
-                    ),
+                    AuthNameField(controller: _nameController),
                     const SizedBox(height: 12),
-                    TextFormField(
-                      controller: _emailController,
-                      keyboardType: TextInputType.emailAddress,
-                      autocorrect: false,
-                      decoration: const InputDecoration(
-                        labelText: 'Email',
-                        hintText: 'you@example.com',
-                      ),
-                      validator: AuthInputValidator.validateEmail,
-                    ),
+                    AuthEmailField(controller: _emailController),
                     const SizedBox(height: 12),
                     AuthPasswordField(
                       controller: _passwordController,
-                      label: 'Password',
+                      label: AuthUiCopy.passwordLabel,
                       obscureText: _obscurePassword,
                       onToggleVisibility: () => setState(() {
                         _obscurePassword = !_obscurePassword;
@@ -121,7 +104,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                     const SizedBox(height: 12),
                     AuthPasswordField(
                       controller: _confirmController,
-                      label: 'Confirm Password',
+                      label: AuthUiCopy.confirmPasswordLabel,
                       obscureText: _obscurePassword,
                       onToggleVisibility: () => setState(() {
                         _obscurePassword = !_obscurePassword;
@@ -144,7 +127,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                       onPressed: isLoading ? null : _submit,
                       child: AuthSubmitButtonChild(
                         isLoading: isLoading,
-                        label: 'Create Account',
+                        label: AuthUiCopy.createAccountAction,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -152,7 +135,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                       onPressed: isLoading
                           ? null
                           : () => context.go(AppRoutePath.login),
-                      child: const Text('Back to Sign In'),
+                      child: const Text(AuthUiCopy.backToSignInAction),
                     ),
                   ],
                 ),

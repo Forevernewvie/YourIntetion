@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/constants/app_constants.dart';
 import '../../../../shared/widgets/psc_blocks.dart';
+import '../copy/auth_ui_copy.dart';
+import '../validation/auth_input_validator.dart';
 
 /// Purpose: Render a reusable hero panel for auth entry screens.
 class AuthHeroCard extends StatelessWidget {
@@ -14,10 +16,17 @@ class AuthHeroCard extends StatelessWidget {
     super.key,
   });
 
+  /// Purpose: Construct auth hero panel directly from centralized hero content.
+  AuthHeroCard.fromContent({required AuthHeroContent content, super.key})
+    : eyebrow = content.eyebrow,
+      title = content.title,
+      description = content.description,
+      points = content.points;
+
   final String eyebrow;
   final String title;
   final String description;
-  final List<AuthHeroPoint> points;
+  final List<AuthHeroPointContent> points;
 
   /// Purpose: Build auth hero panel with deterministic editorial styling.
   @override
@@ -55,15 +64,6 @@ class AuthHeroCard extends StatelessWidget {
   }
 }
 
-/// Purpose: Describe a single supporting message inside an auth hero panel.
-class AuthHeroPoint {
-  /// Purpose: Construct auth hero bullet content.
-  const AuthHeroPoint({required this.label, required this.icon});
-
-  final String label;
-  final IconData icon;
-}
-
 /// Purpose: Render a consistent password field across auth-related forms.
 class AuthPasswordField extends StatelessWidget {
   /// Purpose: Construct password input with shared visibility toggle behavior.
@@ -72,7 +72,7 @@ class AuthPasswordField extends StatelessWidget {
     required this.label,
     required this.obscureText,
     required this.onToggleVisibility,
-    required this.validator,
+    this.validator = AuthInputValidator.validatePassword,
     this.autofillHints,
     super.key,
   });
@@ -103,6 +103,60 @@ class AuthPasswordField extends StatelessWidget {
           ),
         ),
       ),
+      validator: validator,
+    );
+  }
+}
+
+/// Purpose: Render a shared email input field across auth flows.
+class AuthEmailField extends StatelessWidget {
+  /// Purpose: Construct email input with shared keyboard and validation behavior.
+  const AuthEmailField({
+    required this.controller,
+    this.label = AuthUiCopy.emailLabel,
+    this.hintText = AuthUiCopy.emailHint,
+    this.validator = AuthInputValidator.validateEmail,
+    super.key,
+  });
+
+  final TextEditingController controller;
+  final String label;
+  final String hintText;
+  final FormFieldValidator<String> validator;
+
+  /// Purpose: Build email field with consistent decoration and validation.
+  @override
+  Widget build(BuildContext context) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: TextInputType.emailAddress,
+      autocorrect: false,
+      decoration: InputDecoration(labelText: label, hintText: hintText),
+      validator: validator,
+    );
+  }
+}
+
+/// Purpose: Render a shared name input field across auth flows.
+class AuthNameField extends StatelessWidget {
+  /// Purpose: Construct name input with shared label and validation behavior.
+  const AuthNameField({
+    required this.controller,
+    this.label = AuthUiCopy.nameLabel,
+    this.validator = AuthInputValidator.validateName,
+    super.key,
+  });
+
+  final TextEditingController controller;
+  final String label;
+  final FormFieldValidator<String> validator;
+
+  /// Purpose: Build name field with consistent decoration and validation.
+  @override
+  Widget build(BuildContext context) {
+    return TextFormField(
+      controller: controller,
+      decoration: InputDecoration(labelText: label),
       validator: validator,
     );
   }
