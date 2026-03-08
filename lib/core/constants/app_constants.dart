@@ -32,6 +32,17 @@ abstract final class AppNetworkDefaults {
   }
 }
 
+/// Purpose: Centralize network metadata keys to avoid repeated string literals.
+abstract final class AppNetworkKey {
+  static const authorizationHeader = 'Authorization';
+  static const retryAttempt = 'retryAttempt';
+}
+
+/// Purpose: Centralize network protocol values to avoid repeated literals.
+abstract final class AppNetworkValue {
+  static const bearerScheme = 'Bearer';
+}
+
 /// Purpose: Centralize UI spacing tokens to improve consistency and maintainability.
 abstract final class AppUiSpacing {
   static const xxs = 4.0;
@@ -80,6 +91,13 @@ abstract final class AppUiDuration {
   static const oneSecond = Duration(seconds: 1);
 }
 
+/// Purpose: Centralize structured log event names for cross-layer consistency.
+abstract final class AppLogEvent {
+  static const httpRequest = 'http_request';
+  static const httpResponse = 'http_response';
+  static const httpError = 'http_error';
+}
+
 /// Purpose: Centralize common feedback text for reuse and easier testing.
 abstract final class AppFeedbackMessage {
   static const basicRulesSaved = 'Basic rules saved.';
@@ -94,6 +112,15 @@ abstract final class AppAuthPolicy {
   static const resendCooldownSeconds = 60;
 }
 
+/// Purpose: Centralize onboarding policy values to avoid repeated setup magic numbers.
+abstract final class AppOnboardingPolicy {
+  static const totalSteps = 4;
+  static const maxTopicSelections = 8;
+  static const defaultNewsSourceWeight = 70;
+  static const defaultVideoSourceWeight = 20;
+  static const defaultCommunitySourceWeight = 10;
+}
+
 /// Purpose: Centralize auth UI copy used across validation and status states.
 abstract final class AppAuthMessage {
   static const invalidEmail = 'Enter a valid email address.';
@@ -101,20 +128,30 @@ abstract final class AppAuthMessage {
   static const passwordTooShort = 'Password must be at least 8 characters.';
   static const passwordConfirmationMismatch =
       'Password confirmation does not match.';
+  static const authTimeout = 'Network timeout while authenticating.';
+  static const signInFailed =
+      'Failed to sign in. Please check your credentials.';
+  static const signUpFailed = 'Failed to create account. Please retry.';
   static const authFailedRetry = 'Authentication request failed. Please retry.';
   static const accountCreationFailedRetry =
       'Account creation failed. Please retry.';
+  static const authUnauthorized = 'Authentication failed.';
+  static const authTooManyRequests =
+      'Too many requests. Please wait and try again.';
   static const verificationTokenMissing =
       'Verification link is missing a token.';
   static const verificationSucceeded =
       'Email verified successfully. You can continue setup.';
   static const verificationInvalidOrExpired =
       'Verification link is invalid or expired.';
+  static const sessionRefreshFailed = 'Unable to refresh session.';
   static const passwordResetRequestFailed =
       'Unable to request password reset. Please retry.';
   static const passwordResetRequestSubmitted =
       'If this account exists, reset instructions were sent to your email.';
   static const resetTokenRequired = 'Reset token is required.';
+  static const passwordResetInvalidOrExpired =
+      'Reset link is invalid or expired.';
   static const passwordResetComplete =
       'Password reset complete. Please sign in with your new password.';
   static const passwordResetFailed = 'Unable to reset password. Please retry.';
@@ -128,4 +165,25 @@ abstract final class AppAuthMessage {
       'Verification is still pending. Please verify and retry.';
   static const verificationStatusRefreshFailed =
       'Failed to refresh verification status.';
+}
+
+/// Purpose: Centralize auth log event identifiers for consistent telemetry queries.
+abstract final class AppAuthLogEvent {
+  static const bootstrapSession = 'auth_bootstrap_session';
+  static const signInRequested = 'auth_sign_in_requested';
+  static const signInSucceeded = 'auth_sign_in_succeeded';
+  static const signInFailed = 'auth_sign_in_failed';
+  static const signUpRequested = 'auth_sign_up_requested';
+  static const signUpSucceeded = 'auth_sign_up_succeeded';
+  static const signUpFailed = 'auth_sign_up_failed';
+  static const verificationResendMissingEmail =
+      'auth_verification_resend_missing_email';
+  static const verificationResendFailed = 'auth_verification_resend_failed';
+  static const verificationRefreshFailed = 'auth_verification_refresh_failed';
+  static const verificationTokenResolutionFailed =
+      'auth_verification_token_resolution_failed';
+  static const passwordResetRequestFailed =
+      'auth_password_reset_request_failed';
+  static const passwordResetConfirmFailed =
+      'auth_password_reset_confirm_failed';
 }
