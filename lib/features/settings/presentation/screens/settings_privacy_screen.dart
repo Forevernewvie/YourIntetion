@@ -3,17 +3,39 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_router.dart';
+import '../../../../core/constants/app_constants.dart';
+import '../../../../core/navigation/external_link_service.dart';
 import '../../../../core/session/session_providers.dart';
+import '../../../../shared/feedback/app_feedback_messenger.dart';
 import '../../../../shared/layout/psc_page_scaffold.dart';
 import '../../../../shared/widgets/psc_blocks.dart';
 import '../../../../shared/widgets/psc_bottom_nav.dart';
 import '../../../auth/presentation/providers/auth_providers.dart';
 import '../../../onboarding/presentation/providers/onboarding_providers.dart';
+import '../copy/settings_privacy_copy.dart';
 
 /// Purpose: Render explainability and privacy controls.
 class SettingsPrivacyScreen extends ConsumerWidget {
   /// Purpose: Create settings and privacy screen widget.
   const SettingsPrivacyScreen({super.key});
+
+  /// Purpose: Open the public privacy policy and surface deterministic feedback if it fails.
+  Future<void> _openPrivacyPolicy(BuildContext context, WidgetRef ref) async {
+    final opened = await ref
+        .read(externalLinkServiceProvider)
+        .openExternal(AppLegalUrl.privacyPolicyUri);
+
+    if (!context.mounted || opened) {
+      return;
+    }
+
+    AppFeedbackMessenger.showError(
+      context,
+      message: SettingsPrivacyCopy.privacyPolicyOpenFailed,
+      event: 'settings_privacy_policy_open_failed',
+      fields: {'url': AppLegalUrl.privacyPolicy},
+    );
+  }
 
   /// Purpose: Build settings and privacy interface.
   @override
@@ -22,7 +44,7 @@ class SettingsPrivacyScreen extends ConsumerWidget {
     final email = ref.watch(currentUserEmailProvider) ?? 'Not signed in';
 
     return PscPageScaffold(
-      title: 'Settings & Privacy',
+      title: SettingsPrivacyCopy.screenTitle,
       bottomNavigation: const PscBottomNav(currentIndex: 3),
       body: ListView(
         children: [
@@ -32,17 +54,17 @@ class SettingsPrivacyScreen extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const PscInfoPill(
-                  label: 'Accessible Controls',
+                  label: SettingsPrivacyCopy.heroEyebrow,
                   icon: Icons.admin_panel_settings_outlined,
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'Keep trust visible, not hidden in menus.',
+                  SettingsPrivacyCopy.heroTitle,
                   style: theme.textTheme.headlineSmall,
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'This area governs account state, transparency controls, and how much of the digest system remains visible and adjustable to you.',
+                  SettingsPrivacyCopy.heroDescription,
                   style: theme.textTheme.bodyMedium,
                 ),
               ],
@@ -50,36 +72,87 @@ class SettingsPrivacyScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
           PscRuleSectionCard(
-            title: 'Account',
-            description: '$email • locale • digest timezone',
-            status: 'Configured',
-            hint: 'Profile and identity state',
+            title: SettingsPrivacyCopy.accountTitle,
+            description: SettingsPrivacyCopy.accountDescription(email),
+            status: SettingsPrivacyCopy.accountStatus,
+            hint: SettingsPrivacyCopy.accountHint,
             statusColor: theme.colorScheme.primary,
           ),
           const SizedBox(height: 10),
           const PscRuleSectionCard(
-            title: 'Privacy Controls',
-            description: 'Data export, account deletion, and consent history.',
-            status: 'Transparent',
-            hint: 'Designed to keep control explicit',
+            title: SettingsPrivacyCopy.privacyControlsTitle,
+            description: SettingsPrivacyCopy.privacyControlsDescription,
+            status: SettingsPrivacyCopy.privacyControlsStatus,
+            hint: SettingsPrivacyCopy.privacyControlsHint,
           ),
           const SizedBox(height: 10),
-          const PscStateRowCard(label: 'Theme', value: 'System (Light / Dark)'),
+          PscSurfaceCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const PscSectionTitle(SettingsPrivacyCopy.legalSectionTitle),
+                const SizedBox(height: 14),
+                Text(
+                  SettingsPrivacyCopy.privacyPolicyDescription,
+                  style: theme.textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 14),
+                PscInfoPill(
+                  label: SettingsPrivacyCopy.privacyPolicyHostLabel,
+                  icon: Icons.public_rounded,
+                  backgroundColor: theme.colorScheme.secondary.withValues(
+                    alpha: 0.16,
+                  ),
+                  foregroundColor: theme.colorScheme.onSurface,
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  SettingsPrivacyCopy.privacyPolicyUrlLabel,
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  AppLegalUrl.privacyPolicy,
+                  style: theme.textTheme.bodySmall,
+                ),
+                const SizedBox(height: 14),
+                OutlinedButton.icon(
+                  onPressed: () => _openPrivacyPolicy(context, ref),
+                  icon: const Icon(Icons.open_in_new_rounded),
+                  label: const Text(
+                    SettingsPrivacyCopy.privacyPolicyOpenAction,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  SettingsPrivacyCopy.privacyPolicyHint,
+                  style: theme.textTheme.bodySmall,
+                ),
+              ],
+            ),
+          ),
           const SizedBox(height: 10),
           const PscStateRowCard(
-            label: 'Explainability mode',
-            value: 'Always visible',
+            label: SettingsPrivacyCopy.themeLabel,
+            value: SettingsPrivacyCopy.themeValue,
+          ),
+          const SizedBox(height: 10),
+          const PscStateRowCard(
+            label: SettingsPrivacyCopy.explainabilityLabel,
+            value: SettingsPrivacyCopy.explainabilityValue,
           ),
           const SizedBox(height: 10),
           PscSurfaceCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const PscSectionTitle('Privacy Actions'),
+                const PscSectionTitle(SettingsPrivacyCopy.privacyActionsTitle),
                 const SizedBox(height: 14),
                 OutlinedButton(
                   onPressed: () {},
-                  child: const Text('Export My Data'),
+                  child: const Text(SettingsPrivacyCopy.exportDataAction),
                 ),
                 const SizedBox(height: 8),
                 OutlinedButton(
@@ -90,15 +163,14 @@ class SettingsPrivacyScreen extends ConsumerWidget {
                     }
                     context.go(AppRoutePath.welcome);
                   },
-                  child: const Text('Replay Onboarding'),
+                  child: const Text(SettingsPrivacyCopy.replayOnboardingAction),
                 ),
               ],
             ),
           ),
           const SizedBox(height: 10),
           PscStatusBanner(
-            message:
-                'Account deletion is intentionally separated from routine actions to reduce destructive mistakes.',
+            message: SettingsPrivacyCopy.deleteWarningMessage,
             color: theme.colorScheme.tertiary,
           ),
           const SizedBox(height: 10),
@@ -108,13 +180,13 @@ class SettingsPrivacyScreen extends ConsumerWidget {
               foregroundColor: theme.colorScheme.error,
               side: BorderSide(color: theme.colorScheme.error),
             ),
-            child: const Text('Delete Account'),
+            child: const Text(SettingsPrivacyCopy.deleteAccountAction),
           ),
           const SizedBox(height: 10),
           FilledButton.tonal(
             onPressed: () =>
                 ref.read(authControllerProvider.notifier).signOut(),
-            child: const Text('Sign Out'),
+            child: const Text(SettingsPrivacyCopy.signOutAction),
           ),
         ],
       ),
