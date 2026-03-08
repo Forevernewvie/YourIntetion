@@ -9,6 +9,7 @@ import '../../data/datasources/digest_local_data_source.dart';
 import '../../data/datasources/digest_remote_data_source.dart';
 import '../../data/local/isar/isar_database.dart';
 import '../../data/repositories/digest_repository_impl.dart';
+import '../../domain/factories/default_rule_profile_factory.dart';
 import '../../domain/entities/digest.dart';
 import '../../domain/entities/feedback_event.dart';
 import '../../domain/entities/rule_profile.dart';
@@ -16,19 +17,7 @@ import '../../domain/repositories/digest_repository.dart';
 
 /// Purpose: Provide current active rule profile state used by the app.
 final activeRuleProfileProvider = StateProvider<RuleProfile>((ref) {
-  return RuleProfile(
-    id: '',
-    version: 1,
-    topicPriorities: const {'AI': 90, 'Markets': 80, 'Science': 60},
-    hardFilters: const ['Celebrity Gossip'],
-    sourceAllowlist: const <String>[],
-    sourceBlocklist: const <String>[],
-    tone: SummaryTone.neutral,
-    frequency: DigestFrequency.weekdays,
-    length: DigestLength.quick,
-    rankingTweaks: const {'community': 10, 'video': 5},
-    updatedAt: DateTime.now().toUtc(),
-  );
+  return DefaultRuleProfileFactory.create();
 });
 
 /// Purpose: Trigger digest feed refresh through integer invalidation.
