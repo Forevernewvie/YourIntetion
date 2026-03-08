@@ -10,6 +10,7 @@ import '../../../../core/logging/app_logger.dart';
 import '../../../../shared/layout/psc_adaptive_scroll_body.dart';
 import '../../../../shared/layout/psc_page_scaffold.dart';
 import '../../../../shared/widgets/psc_blocks.dart';
+import '../copy/auth_ui_copy.dart';
 import '../presenters/auth_error_presenter.dart';
 import '../providers/auth_providers.dart';
 import '../widgets/auth_support_widgets.dart';
@@ -45,7 +46,7 @@ class _EmailVerificationPendingScreenState
     final session = ref.read(authControllerProvider).valueOrNull;
     final email = session?.email ?? '';
     if (email.isEmpty) {
-      AppLogger.warn('auth_verification_resend_missing_email');
+      AppLogger.warn(AppAuthLogEvent.verificationResendMissingEmail);
       setState(() {
         _statusMessage = AppAuthMessage.verificationEmailMissing;
         _isErrorStatus = true;
@@ -64,7 +65,7 @@ class _EmailVerificationPendingScreenState
       });
     } catch (error, stackTrace) {
       AppLogger.error(
-        'auth_verification_resend_failed',
+        AppAuthLogEvent.verificationResendFailed,
         error: error,
         stackTrace: stackTrace,
       );
@@ -97,7 +98,7 @@ class _EmailVerificationPendingScreenState
       });
     } catch (error, stackTrace) {
       AppLogger.error(
-        'auth_verification_refresh_failed',
+        AppAuthLogEvent.verificationRefreshFailed,
         error: error,
         stackTrace: stackTrace,
       );
@@ -141,20 +142,18 @@ class _EmailVerificationPendingScreenState
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final session = ref.watch(authControllerProvider).valueOrNull;
-    final email = session?.email ?? 'your account email';
-    final resendLabel = _remainingSeconds == 0
-        ? 'Resend Verification Email'
-        : 'Resend in ${_remainingSeconds}s';
+    final email = session?.email ?? AuthUiCopy.defaultVerificationEmail;
+    final resendLabel = AuthUiCopy.resendVerificationLabel(_remainingSeconds);
 
     return PscPageScaffold(
-      title: 'Verify Your Email',
+      title: AuthUiCopy.verifyYourEmailTitle,
       body: PscAdaptiveScrollBody(
         extraBottomPadding: 8,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'We sent a verification link to:',
+              AuthUiCopy.verificationEmailLead,
               style: theme.textTheme.bodyMedium,
             ),
             const SizedBox(height: 6),
@@ -166,7 +165,7 @@ class _EmailVerificationPendingScreenState
             ),
             const SizedBox(height: 12),
             Text(
-              'Verification is required before you can view personalized digests.',
+              AuthUiCopy.verificationRequiredDescription,
               style: theme.textTheme.bodySmall,
             ),
             const SizedBox(height: 12),
@@ -183,7 +182,7 @@ class _EmailVerificationPendingScreenState
               onPressed: _iHaveVerified,
               child: const AuthSubmitButtonChild(
                 isLoading: false,
-                label: "I've Verified My Email",
+                label: AuthUiCopy.verifiedEmailAction,
               ),
             ),
             const SizedBox(height: 8),
@@ -194,7 +193,7 @@ class _EmailVerificationPendingScreenState
             const Spacer(),
             OutlinedButton(
               onPressed: () => context.go(AppRoutePath.login),
-              child: const Text('Back to Sign In'),
+              child: const Text(AuthUiCopy.backToSignInAction),
             ),
           ],
         ),

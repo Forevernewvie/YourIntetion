@@ -7,9 +7,9 @@ import '../../../../core/constants/app_constants.dart';
 import '../../../../shared/layout/psc_adaptive_scroll_body.dart';
 import '../../../../shared/layout/psc_page_scaffold.dart';
 import '../../../../shared/widgets/psc_blocks.dart';
+import '../copy/auth_ui_copy.dart';
 import '../presenters/auth_error_presenter.dart';
 import '../providers/auth_providers.dart';
-import '../validation/auth_input_validator.dart';
 import '../widgets/auth_support_widgets.dart';
 
 /// Purpose: Render login form for authenticated app access.
@@ -66,7 +66,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         : null;
 
     return PscPageScaffold(
-      title: 'Sign In',
+      title: AuthUiCopy.signInTitle,
       body: PscAdaptiveScrollBody(
         extraBottomPadding: 8,
         child: Form(
@@ -74,48 +74,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const AuthHeroCard(
-                eyebrow: 'Explainable Briefing',
-                title: 'Read less noise. Keep the receipts.',
-                description:
-                    'Sign in to a digest that explains every ranking decision and traces each summary back to the underlying sources.',
-                points: [
-                  AuthHeroPoint(
-                    label: 'Every digest explains why it appears.',
-                    icon: Icons.tune_outlined,
-                  ),
-                  AuthHeroPoint(
-                    label: 'Every summary links back to original sources.',
-                    icon: Icons.link_outlined,
-                  ),
-                ],
-              ),
+              AuthHeroCard.fromContent(content: AuthUiCopy.loginHero),
               const SizedBox(height: 16),
               PscSurfaceCard(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const PscSectionTitle('Your Account'),
+                    const PscSectionTitle(AuthUiCopy.yourAccountSection),
                     const SizedBox(height: 14),
-                    TextFormField(
-                      controller: _emailController,
-                      keyboardType: TextInputType.emailAddress,
-                      autocorrect: false,
-                      decoration: const InputDecoration(
-                        labelText: 'Email',
-                        hintText: 'you@example.com',
-                      ),
-                      validator: AuthInputValidator.validateEmail,
-                    ),
+                    AuthEmailField(controller: _emailController),
                     const SizedBox(height: 12),
                     AuthPasswordField(
                       controller: _passwordController,
-                      label: 'Password',
+                      label: AuthUiCopy.passwordLabel,
                       obscureText: _obscurePassword,
                       onToggleVisibility: () => setState(() {
                         _obscurePassword = !_obscurePassword;
                       }),
-                      validator: AuthInputValidator.validatePassword,
                     ),
                     const SizedBox(height: 8),
                     Align(
@@ -124,7 +99,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         onPressed: isLoading
                             ? null
                             : () => context.go(AppRoutePath.forgotPassword),
-                        child: const Text('Forgot password?'),
+                        child: const Text(AuthUiCopy.forgotPasswordAction),
                       ),
                     ),
                     if (errorMessage != null) ...[
@@ -138,7 +113,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       onPressed: isLoading ? null : _submit,
                       child: AuthSubmitButtonChild(
                         isLoading: isLoading,
-                        label: 'Sign In',
+                        label: AuthUiCopy.signInAction,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -146,7 +121,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       onPressed: isLoading
                           ? null
                           : () => context.go(AppRoutePath.signUp),
-                      child: const Text('Create Account'),
+                      child: const Text(AuthUiCopy.createAccountAction),
                     ),
                   ],
                 ),

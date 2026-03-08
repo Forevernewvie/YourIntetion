@@ -8,6 +8,7 @@ import '../../../../core/logging/app_logger.dart';
 import '../../../../shared/layout/psc_adaptive_scroll_body.dart';
 import '../../../../shared/layout/psc_page_scaffold.dart';
 import '../../../../shared/widgets/psc_blocks.dart';
+import '../copy/auth_ui_copy.dart';
 import '../presenters/auth_error_presenter.dart';
 import '../providers/auth_providers.dart';
 import '../validation/auth_input_validator.dart';
@@ -79,7 +80,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
       });
     } catch (error, stackTrace) {
       AppLogger.error(
-        'auth_password_reset_confirm_failed',
+        AppAuthLogEvent.passwordResetConfirmFailed,
         error: error,
         stackTrace: stackTrace,
       );
@@ -101,7 +102,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
     final theme = Theme.of(context);
 
     return PscPageScaffold(
-      title: 'Reset Password',
+      title: AuthUiCopy.resetPasswordTitle,
       body: PscAdaptiveScrollBody(
         extraBottomPadding: 8,
         child: Form(
@@ -110,20 +111,22 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                'Paste your reset token and choose a new password.',
+                AuthUiCopy.resetPasswordDescription,
                 style: theme.textTheme.bodyMedium,
               ),
               const SizedBox(height: 14),
               TextFormField(
                 controller: _tokenController,
                 autocorrect: false,
-                decoration: const InputDecoration(labelText: 'Reset Token'),
+                decoration: const InputDecoration(
+                  labelText: AuthUiCopy.resetTokenLabel,
+                ),
                 validator: AuthInputValidator.validateResetToken,
               ),
               const SizedBox(height: 12),
               AuthPasswordField(
                 controller: _passwordController,
-                label: 'New Password',
+                label: AuthUiCopy.newPasswordLabel,
                 obscureText: _obscurePassword,
                 onToggleVisibility: () => setState(() {
                   _obscurePassword = !_obscurePassword;
@@ -133,7 +136,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
               const SizedBox(height: 12),
               AuthPasswordField(
                 controller: _confirmController,
-                label: 'Confirm Password',
+                label: AuthUiCopy.confirmPasswordLabel,
                 obscureText: _obscurePassword,
                 onToggleVisibility: () => setState(() {
                   _obscurePassword = !_obscurePassword;
@@ -158,7 +161,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                 onPressed: _isSubmitting ? null : _submit,
                 child: AuthSubmitButtonChild(
                   isLoading: _isSubmitting,
-                  label: 'Reset Password',
+                  label: AuthUiCopy.resetPasswordAction,
                 ),
               ),
               const SizedBox(height: 8),
@@ -166,7 +169,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                 onPressed: _isSubmitting
                     ? null
                     : () => context.go(AppRoutePath.login),
-                child: const Text('Back to Sign In'),
+                child: const Text(AuthUiCopy.backToSignInAction),
               ),
             ],
           ),

@@ -8,6 +8,7 @@ import '../../../../core/logging/app_logger.dart';
 import '../../../../shared/layout/psc_adaptive_scroll_body.dart';
 import '../../../../shared/layout/psc_page_scaffold.dart';
 import '../../../../shared/widgets/psc_blocks.dart';
+import '../copy/auth_ui_copy.dart';
 import '../presenters/auth_error_presenter.dart';
 import '../providers/auth_providers.dart';
 import '../widgets/auth_support_widgets.dart';
@@ -30,7 +31,7 @@ class _VerificationResultScreenState
     extends ConsumerState<VerificationResultScreen> {
   bool _isLoading = true;
   bool _isSuccess = false;
-  String _message = 'Verifying your email...';
+  String _message = AuthUiCopy.verifyingEmailStatus;
 
   /// Purpose: Resolve verification token immediately after first frame render.
   @override
@@ -62,7 +63,7 @@ class _VerificationResultScreenState
       });
     } catch (error, stackTrace) {
       AppLogger.error(
-        'auth_verification_token_resolution_failed',
+        AppAuthLogEvent.verificationTokenResolutionFailed,
         error: error,
         stackTrace: stackTrace,
       );
@@ -82,9 +83,12 @@ class _VerificationResultScreenState
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final heroContent = _isSuccess
+        ? AuthUiCopy.verificationSuccessHero
+        : AuthUiCopy.verificationFailureHero;
 
     return PscPageScaffold(
-      title: 'Email Verification',
+      title: AuthUiCopy.emailVerificationTitle,
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : PscAdaptiveScrollBody(
@@ -92,17 +96,7 @@ class _VerificationResultScreenState
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  AuthHeroCard(
-                    eyebrow: _isSuccess
-                        ? 'Verification Complete'
-                        : 'Verification Review',
-                    title: _isSuccess
-                        ? 'Your account is ready for guided setup.'
-                        : 'This verification link could not be completed.',
-                    description: _isSuccess
-                        ? 'Email trust has been confirmed. You can continue to topic and source setup now.'
-                        : 'Try the verification flow again or request a fresh email link before continuing.',
-                  ),
+                  AuthHeroCard.fromContent(content: heroContent),
                   const SizedBox(height: 12),
                   Icon(
                     _isSuccess
@@ -129,8 +123,8 @@ class _VerificationResultScreenState
                     child: AuthSubmitButtonChild(
                       isLoading: false,
                       label: _isSuccess
-                          ? 'Continue Setup'
-                          : 'Back to Verification',
+                          ? AuthUiCopy.continueSetupAction
+                          : AuthUiCopy.backToVerificationAction,
                     ),
                   ),
                 ],

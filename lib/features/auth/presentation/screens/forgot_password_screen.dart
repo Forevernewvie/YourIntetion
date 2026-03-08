@@ -8,9 +8,9 @@ import '../../../../core/logging/app_logger.dart';
 import '../../../../shared/layout/psc_adaptive_scroll_body.dart';
 import '../../../../shared/layout/psc_page_scaffold.dart';
 import '../../../../shared/widgets/psc_blocks.dart';
+import '../copy/auth_ui_copy.dart';
 import '../presenters/auth_error_presenter.dart';
 import '../providers/auth_providers.dart';
-import '../validation/auth_input_validator.dart';
 import '../widgets/auth_support_widgets.dart';
 
 /// Purpose: Collect account email and trigger password reset mail flow.
@@ -62,7 +62,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
       });
     } catch (error, stackTrace) {
       AppLogger.error(
-        'auth_password_reset_request_failed',
+        AppAuthLogEvent.passwordResetRequestFailed,
         error: error,
         stackTrace: stackTrace,
       );
@@ -84,7 +84,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
     final theme = Theme.of(context);
 
     return PscPageScaffold(
-      title: 'Forgot Password',
+      title: AuthUiCopy.forgotPasswordTitle,
       body: PscAdaptiveScrollBody(
         extraBottomPadding: 8,
         child: Form(
@@ -93,20 +93,11 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                'Enter your email to receive a password reset link.',
+                AuthUiCopy.forgotPasswordDescription,
                 style: theme.textTheme.bodyMedium,
               ),
               const SizedBox(height: 14),
-              TextFormField(
-                controller: _emailController,
-                keyboardType: TextInputType.emailAddress,
-                autocorrect: false,
-                decoration: const InputDecoration(
-                  labelText: 'Email',
-                  hintText: 'you@example.com',
-                ),
-                validator: AuthInputValidator.validateEmail,
-              ),
+              AuthEmailField(controller: _emailController),
               if (_statusMessage != null) ...[
                 const SizedBox(height: 12),
                 PscStatusBanner(
@@ -121,7 +112,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                 onPressed: _isSubmitting ? null : _submit,
                 child: AuthSubmitButtonChild(
                   isLoading: _isSubmitting,
-                  label: 'Send Reset Link',
+                  label: AuthUiCopy.sendResetLinkAction,
                 ),
               ),
               const SizedBox(height: 8),
@@ -129,7 +120,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                 onPressed: _isSubmitting
                     ? null
                     : () => context.go(AppRoutePath.login),
-                child: const Text('Back to Sign In'),
+                child: const Text(AuthUiCopy.backToSignInAction),
               ),
             ],
           ),
