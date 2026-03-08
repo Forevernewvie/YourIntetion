@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_router.dart';
+import '../../../../core/constants/app_constants.dart';
 import '../../../../shared/layout/psc_adaptive_scroll_body.dart';
 import '../../../../shared/layout/psc_page_scaffold.dart';
 import '../../../../shared/widgets/psc_blocks.dart';
+import '../copy/onboarding_ui_copy.dart';
 import '../providers/onboarding_providers.dart';
 
 /// Purpose: Finalize tone and frequency before first digest generation.
@@ -38,29 +40,30 @@ class _ToneFrequencyScreenState extends ConsumerState<ToneFrequencyScreen> {
     final theme = Theme.of(context);
 
     return PscPageScaffold(
-      title: 'Tone & Frequency',
+      title: OnboardingUiCopy.toneFrequencyTitle,
       body: PscAdaptiveScrollBody(
         extraBottomPadding: 8,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const PscStepHeader(
+            PscStepHeader(
               step: 3,
-              totalSteps: 4,
-              title: 'Set how the brief should sound and arrive.',
-              description:
-                  'Choose a cadence that feels sustainable. The goal is a digest you actually return to, not another noisy notification stream.',
-              tags: ['Daily by default', 'Tone can evolve'],
+              totalSteps: AppOnboardingPolicy.totalSteps,
+              title: OnboardingUiCopy.toneStep.title,
+              description: OnboardingUiCopy.toneStep.description,
+              tags: OnboardingUiCopy.toneStep.tags,
             ),
             const SizedBox(height: 16),
             PscSurfaceCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const PscSectionTitle('Digest Tone'),
+                  const PscSectionTitle(
+                    OnboardingUiCopy.digestToneSectionTitle,
+                  ),
                   const SizedBox(height: 12),
                   Text(
-                    'Neutral is the default because it lowers cognitive load while keeping room for analytical context when a story needs it.',
+                    OnboardingUiCopy.digestToneDescription,
                     style: theme.textTheme.bodyMedium,
                   ),
                   const SizedBox(height: 14),
@@ -69,7 +72,7 @@ class _ToneFrequencyScreenState extends ConsumerState<ToneFrequencyScreen> {
                     runSpacing: 8,
                     children: [
                       PscInfoPill(
-                        label: 'Neutral',
+                        label: OnboardingUiCopy.toneNeutral,
                         icon: Icons.radio_button_checked,
                         backgroundColor: theme.colorScheme.primary.withValues(
                           alpha: 0.12,
@@ -77,7 +80,7 @@ class _ToneFrequencyScreenState extends ConsumerState<ToneFrequencyScreen> {
                         foregroundColor: theme.colorScheme.primary,
                       ),
                       PscInfoPill(
-                        label: 'Analytical',
+                        label: OnboardingUiCopy.toneAnalytical,
                         icon: Icons.analytics_outlined,
                         backgroundColor: theme.colorScheme.secondary.withValues(
                           alpha: 0.18,
@@ -85,7 +88,7 @@ class _ToneFrequencyScreenState extends ConsumerState<ToneFrequencyScreen> {
                         foregroundColor: theme.colorScheme.onSurface,
                       ),
                       PscInfoPill(
-                        label: 'Brief',
+                        label: OnboardingUiCopy.toneBrief,
                         icon: Icons.short_text_rounded,
                         backgroundColor: theme.colorScheme.secondary.withValues(
                           alpha: 0.18,
@@ -99,16 +102,17 @@ class _ToneFrequencyScreenState extends ConsumerState<ToneFrequencyScreen> {
             ),
             const SizedBox(height: 10),
             const PscRuleSectionCard(
-              title: 'Delivery Cadence',
-              description:
-                  'Daily 08:00 brief with a weekly deeper scan on Friday.',
-              status: 'Active',
-              hint: 'Designed for a calm, predictable reading habit',
+              title: OnboardingUiCopy.deliveryCadenceTitle,
+              description: OnboardingUiCopy.deliveryCadenceDescription,
+              status: OnboardingUiCopy.deliveryCadenceStatus,
+              hint: OnboardingUiCopy.deliveryCadenceHint,
             ),
             const SizedBox(height: 10),
             PscStateRowCard(
-              label: 'Preview digest alert',
-              value: _digestPreviewEnabled ? 'ON' : 'OFF',
+              label: OnboardingUiCopy.previewDigestAlertLabel,
+              value: _digestPreviewEnabled
+                  ? OnboardingUiCopy.previewAlertOn
+                  : OnboardingUiCopy.previewAlertOff,
               valueColor: _digestPreviewEnabled
                   ? theme.colorScheme.primary
                   : theme.textTheme.labelSmall?.color,
@@ -119,12 +123,12 @@ class _ToneFrequencyScreenState extends ConsumerState<ToneFrequencyScreen> {
             const SizedBox(height: 18),
             FilledButton(
               onPressed: _finishOnboarding,
-              child: const Text('Finish & Preview Digest'),
+              child: const Text(OnboardingUiCopy.finishPreviewAction),
             ),
             const SizedBox(height: 8),
             OutlinedButton(
               onPressed: () => context.go(AppRoutePath.onboardingSources),
-              child: const Text('Back'),
+              child: const Text(OnboardingUiCopy.backAction),
             ),
           ],
         ),
