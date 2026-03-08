@@ -38,14 +38,33 @@
   - `AppFeedbackMessenger`
   - `AppAuthPolicy`
   - `AppAuthMessage`
+  - `AppAuthLogEvent`
+  - `AppLogWriter`
+  - `AuthUiCopy`
 - Additional auth presentation reuse:
   - `AuthInputValidator`
   - `AuthErrorPresenter`
   - `AuthHeroCard`
+  - `AuthHeroContent`
   - `AuthPasswordField`
+  - `AuthEmailField`
+  - `AuthNameField`
   - `AuthSubmitButtonChild`
-- These changes improve testability by isolating UI feedback rules, validation thresholds, and operational copy away from individual screens.
+- Additional onboarding presentation reuse:
+  - `OnboardingUiCopy`
+  - `OnboardingStepContent`
+  - `OnboardingTopicOption`
+  - `OnboardingSourceOption`
+  - `OnboardingPreviewDigestCardContent`
+- Network reliability abstractions:
+  - `DioRetryPolicy`
+  - `DioRequestCloner`
+  - `AuthHeaderInterceptor`
+  - `StructuredHttpLogInterceptor`
+  - `RetryInterceptor`
+- These changes improve testability by isolating UI feedback rules, validation thresholds, onboarding/auth operational copy, log identifiers, and retry behavior away from individual screens.
 
 ### Remaining Follow-Ups
-- Large volumes of feature copy are still embedded in screen widgets and can be extracted further if localization or A/B testing becomes a requirement.
+- Large digest, rules, and settings screens still contain embedded product copy; extracting all of it would be most valuable only if localization, experimentation, or CMS-driven content becomes a near-term requirement.
 - Some design alpha values remain inline theme decisions; if the design system continues to expand, they should move into dedicated visual tokens.
+- Home and detail digest screens are still relatively large widgets. Breaking them into smaller presentation sections is possible, but the next split should be driven by concrete behavior changes to avoid churn-only refactors.
